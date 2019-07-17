@@ -431,7 +431,7 @@ LRESULT ScintillaEditView::scintillaNew_Proc(HWND hwnd, UINT Message, WPARAM wPa
 
 				// get the current text selection
 
-				CharacterRange range = getSelection();
+				Sci_CharacterRange range = getSelection();
 				if (range.cpMax == range.cpMin)
 				{
 					// no selection: select the current word instead
@@ -744,6 +744,8 @@ void ScintillaEditView::setEmbeddedAspLexer()
 		basic_string<wchar_t> kwlW = pKwArray[LANG_INDEX_INSTR];
 		keywordList = wstring2string(kwlW, CP_ACP);
 	}
+
+	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("asp.default.language"), reinterpret_cast<LPARAM>("2"));
 
 	execute(SCI_SETKEYWORDS, 2, reinterpret_cast<LPARAM>(getCompleteKeywordList(keywordList, L_VB, LANG_INDEX_INSTR)));
 
@@ -1227,8 +1229,20 @@ void ScintillaEditView::setLexer(int lexerID, LangType langType, int whichList)
 	}
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold"), reinterpret_cast<LPARAM>("1"));
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.compact"), reinterpret_cast<LPARAM>("0"));
-
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.comment"), reinterpret_cast<LPARAM>("1"));
+
+	ScintillaViewParams & svp = (ScintillaViewParams &)_pParameter->getSVP();
+
+	if (svp._indentGuideLineShow)
+	{
+		const auto currentIndentMode = execute(SCI_GETINDENTATIONGUIDES);
+		// Python like indentation, excludes lexers (Nim, VB, YAML, etc.)
+		// that includes tailing empty or whitespace only lines in folding block.
+		const bool pythonLike = (lexerID == SCLEX_PYTHON || lexerID == SCLEX_COFFEESCRIPT || lexerID == SCLEX_HASKELL);
+		const int docIndentMode = pythonLike ? SC_IV_LOOKFORWARD : SC_IV_LOOKBOTH;
+		if (currentIndentMode != docIndentMode)
+			execute(SCI_SETINDENTATIONGUIDES, docIndentMode);
+	}
 }
 
 void ScintillaEditView::makeStyle(LangType language, const TCHAR **keywordArray)
@@ -1736,10 +1750,11 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 	    setSpecialStyle(styleLN);
     }
     setTabSettings(_pParameter->getLangFromID(typeDoc));
-
+	/*
 	execute(SCI_SETSTYLEBITS, 8);	// Always use 8 bit mask in Document class (Document::stylingBitsMask),
 									// in that way Editor::PositionIsHotspot will return correct hotspot styleID.
 									// This value has no effect on LexAccessor::mask.
+									*/
 }
 
 BufferID ScintillaEditView::attachDefaultDoc()
@@ -1845,7 +1860,8 @@ void ScintillaEditView::activateBuffer(BufferID buffer)
 
 	setWordChars();
 
-	if (_currentBuffer->getNeedsLexing()) {
+	if (_currentBuffer->getNeedsLexing())
+	{
 		restyleBuffer();
 	}
 
@@ -1945,8 +1961,80 @@ void ScintillaEditView::bufferUpdated(Buffer * buffer, int mask)
 	}
 }
 
+bool ScintillaEditView::isFoldIndentationBased() const
+{
+	const auto lexer = execute(SCI_GETLEXER);
+	// search IndentAmount in scintilla\lexers folder
+	return lexer == SCLEX_PYTHON
+		|| lexer == SCLEX_COFFEESCRIPT
+		|| lexer == SCLEX_HASKELL
+		|| lexer == SCLEX_NIMROD
+		|| lexer == SCLEX_VB
+		|| lexer == SCLEX_YAML
+	;
+}
+
+namespace {
+
+struct FoldLevelStack
+{
+	int levelCount = 0; // 1-based level number
+	int levelStack[MAX_FOLD_COLLAPSE_LEVEL]{};
+
+	void push(int level)
+	{
+		while (levelCount != 0 && level <= levelStack[levelCount - 1])
+		{
+			--levelCount;
+		}
+		levelStack[levelCount++] = level;
+	}
+};
+
+}
+
+void ScintillaEditView::collapseFoldIndentationBased(int level2Collapse, bool mode)
+{
+	execute(SCI_COLOURISE, 0, -1);
+
+	FoldLevelStack levelStack;
+	++level2Collapse; // 1-based level number
+
+	const int maxLine = static_cast<int32_t>(execute(SCI_GETLINECOUNT));
+	int line = 0;
+
+	while (line < maxLine)
+	{
+		int level = static_cast<int32_t>(execute(SCI_GETFOLDLEVEL, line));
+		if (level & SC_FOLDLEVELHEADERFLAG)
+		{
+			level &= SC_FOLDLEVELNUMBERMASK;
+			// don't need the actually level number, only the relationship.
+			levelStack.push(level);
+			if (level2Collapse == levelStack.levelCount)
+			{
+				if (isFolded(line) != mode)
+				{
+					fold(line, mode);
+				}
+				// skip all children lines, required to avoid buffer overrun.
+				line = static_cast<int32_t>(execute(SCI_GETLASTCHILD, line, -1));
+			}
+		}
+		++line;
+	}
+
+	runMarkers(true, 0, true, false);
+}
+
 void ScintillaEditView::collapse(int level2Collapse, bool mode)
 {
+	if (isFoldIndentationBased())
+	{
+		collapseFoldIndentationBased(level2Collapse, mode);
+		return;
+	}
+
 	execute(SCI_COLOURISE, 0, -1);
 
 	int maxLine = static_cast<int32_t>(execute(SCI_GETLINECOUNT));
@@ -2024,7 +2112,7 @@ void ScintillaEditView::foldAll(bool mode)
 
 void ScintillaEditView::getText(char *dest, size_t start, size_t end) const
 {
-	TextRange tr;
+	Sci_TextRange tr;
 	tr.chrg.cpMin = static_cast<long>(start);
 	tr.chrg.cpMax = static_cast<long>(end);
 	tr.lpstrText = dest;
@@ -2138,7 +2226,7 @@ char * ScintillaEditView::getSelectedText(char * txt, int size, bool expand)
 {
 	if (!size)
 		return NULL;
-	CharacterRange range = getSelection();
+	Sci_CharacterRange range = getSelection();
 	if (range.cpMax == range.cpMin && expand)
 	{
 		expandWordSelection();
@@ -2282,27 +2370,27 @@ void ScintillaEditView::beginOrEndSelect()
 	}
 	else
 	{
-		execute(SCI_SETANCHOR, _beginSelectPosition);
+		execute(SCI_SETANCHOR, static_cast<WPARAM>(_beginSelectPosition));
 		_beginSelectPosition = -1;
 	}
 }
 
-void ScintillaEditView::updateBeginEndSelectPosition(const bool is_insert, const int position, const int length)
+void ScintillaEditView::updateBeginEndSelectPosition(bool is_insert, size_t position, size_t length)
 {
-	if (_beginSelectPosition != -1 && position < _beginSelectPosition - 1)
+	if (_beginSelectPosition != -1 && static_cast<long long>(position) < _beginSelectPosition - 1)
 	{
 		if (is_insert)
-			_beginSelectPosition += length;
+			_beginSelectPosition += static_cast<long long>(length);
 		else
-			_beginSelectPosition -= length;
+			_beginSelectPosition -= static_cast<long long>(length);
 
 		assert(_beginSelectPosition >= 0);
 	}
 }
 
-void ScintillaEditView::marginClick(int position, int modifiers)
+void ScintillaEditView::marginClick(Sci_Position position, int modifiers)
 {
-	int lineClick = int(execute(SCI_LINEFROMPOSITION, position, 0));
+	size_t lineClick = execute(SCI_LINEFROMPOSITION, position, 0);
 	int levelClick = int(execute(SCI_GETFOLDLEVEL, lineClick, 0));
 	if (levelClick & SC_FOLDLEVELHEADERFLAG)
     {
@@ -2337,9 +2425,9 @@ void ScintillaEditView::marginClick(int position, int modifiers)
 	}
 }
 
-void ScintillaEditView::expand(int &line, bool doExpand, bool force, int visLevels, int level)
+void ScintillaEditView::expand(size_t& line, bool doExpand, bool force, int visLevels, int level)
 {
-	int lineMaxSubord = int(execute(SCI_GETLASTCHILD, line, level & SC_FOLDLEVELNUMBERMASK));
+	size_t lineMaxSubord = execute(SCI_GETLASTCHILD, line, level & SC_FOLDLEVELNUMBERMASK);
 	++line;
 	while (line <= lineMaxSubord)
     {
@@ -2461,7 +2549,7 @@ void ScintillaEditView::performGlobalStyles()
 void ScintillaEditView::setLineIndent(int line, int indent) const {
 	if (indent < 0)
 		return;
-	CharacterRange crange = getSelection();
+	Sci_CharacterRange crange = getSelection();
 	int posBefore = static_cast<int32_t>(execute(SCI_GETLINEINDENTPOSITION, line));
 	execute(SCI_SETLINEINDENTATION, line, indent);
 	int32_t posAfter = static_cast<int32_t>(execute(SCI_GETLINEINDENTPOSITION, line));
@@ -3050,7 +3138,7 @@ void ScintillaEditView::columnReplace(ColumnModeInfos & cmi, int initial, int in
 }
 
 
-void ScintillaEditView::foldChanged(int line, int levelNow, int levelPrev)
+void ScintillaEditView::foldChanged(size_t line, int levelNow, int levelPrev)
 {
 	if (levelNow & SC_FOLDLEVELHEADERFLAG)		//line can be folded
 	{
@@ -3196,7 +3284,7 @@ void ScintillaEditView::notifyMarkers(Buffer * buf, bool isHide, int location, b
 }
 //Run through full document. When switching in or opening folding
 //hide is false only when user click on margin
-void ScintillaEditView::runMarkers(bool doHide, int searchStart, bool endOfDoc, bool doDelete)
+void ScintillaEditView::runMarkers(bool doHide, size_t searchStart, bool endOfDoc, bool doDelete)
 {
 	//Removes markers if opening
 	/*
@@ -3224,12 +3312,12 @@ void ScintillaEditView::runMarkers(bool doHide, int searchStart, bool endOfDoc, 
 				Skip to LASTCHILD
 				Set last start to lastchild
 	*/
-	int maxLines = static_cast<int32_t>(execute(SCI_GETLINECOUNT));
+	size_t maxLines = execute(SCI_GETLINECOUNT);
 	if (doHide)
 	{
-		int startHiding = searchStart;
+		auto startHiding = searchStart;
 		bool isInSection = false;
-		for (int i = searchStart; i < maxLines; ++i)
+		for (auto i = searchStart; i < maxLines; ++i)
 		{
 			auto state = execute(SCI_MARKERGET, i);
 			if ( ((state & (1 << MARK_HIDELINESEND)) != 0) )
@@ -3254,15 +3342,21 @@ void ScintillaEditView::runMarkers(bool doHide, int searchStart, bool endOfDoc, 
 	}
 	else
 	{
-		int startShowing = searchStart;
+		auto startShowing = searchStart;
 		bool isInSection = false;
-		for (int i = searchStart; i < maxLines; ++i)
+		for (auto i = searchStart; i < maxLines; ++i)
 		{
 			auto state = execute(SCI_MARKERGET, i);
 			if ( ((state & (1 << MARK_HIDELINESEND)) != 0) )
 			{
 				if (doDelete)
+				{
 					execute(SCI_MARKERDELETE, i, MARK_HIDELINESEND);
+					if (!endOfDoc)
+					{
+						return;	//done, only single section requested
+					}	//otherwise keep going
+				}
 				 else if (isInSection)
 				 {
 					if (startShowing >= i)

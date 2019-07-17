@@ -40,7 +40,8 @@
 #define FB_ADDROOT            TEXT("Add")
 #define FB_REMOVEALLROOTS     TEXT("Remove All")
 #define FB_REMOVEROOTFOLDER   TEXT("Remove")
-#define FB_COPYEPATH          TEXT("Copy path")
+#define FB_COPYPATH           TEXT("Copy path")
+#define FB_COPYFILENAME       TEXT("Copy file name")
 #define FB_FINDINFILES        TEXT("Find in Files...")
 #define FB_EXPLORERHERE       TEXT("Explorer here")
 #define FB_CMDHERE            TEXT("CMD here")
@@ -142,14 +143,19 @@ public:
     };
 
 	generic_string getNodePath(HTREEITEM node) const;
+	generic_string getNodeName(HTREEITEM node) const;
 	void addRootFolder(generic_string);
 
 	HTREEITEM getRootFromFullPath(const generic_string & rootPath) const;
-	HTREEITEM findChildNodeFromName(HTREEITEM parent, generic_string);
+	HTREEITEM findChildNodeFromName(HTREEITEM parent, const generic_string&);
 
 	bool addInTree(const generic_string& rootPath, const generic_string& addItemFullPath, HTREEITEM node, std::vector<generic_string> linarPathArray);
 	HTREEITEM findInTree(const generic_string& rootPath, HTREEITEM node, std::vector<generic_string> linarPathArray);
 	bool deleteFromTree(const generic_string& rootPath, HTREEITEM node, std::vector<generic_string> linarPathArray);
+	void deleteAllFromTree() {
+		popupMenuCmd(IDM_FILEBROWSER_REMOVEALLROOTS);
+	};
+
 	bool renameInTree(const generic_string& rootPath, HTREEITEM node, std::vector<generic_string> linarPathArrayFrom, const generic_string & renameTo);
 
 	std::vector<generic_string> getRoots() const;

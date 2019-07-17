@@ -329,7 +329,7 @@ public :
 		}
 	};
 
-	void execSavedCommand(int cmd, uptr_t intValue, generic_string stringValue);
+	void execSavedCommand(int cmd, uptr_t intValue, const generic_string& stringValue);
 	void setStatusbarMessage(const generic_string & msg, FindStatus staus);
 	Finder * createFinder();
 	bool removeFinder(Finder *finder2remove);
@@ -351,6 +351,8 @@ private :
 
 	DIALOG_TYPE _currentStatus;
 	RECT _findClosePos, _replaceClosePos, _findInFilesClosePos;
+	RECT _countInSelFramePos, _replaceInSelFramePos;
+	RECT _countInSelCheckPos, _replaceInSelCheckPos;
 
 	ScintillaEditView **_ppEditView;
 	Finder  *_pFinder;

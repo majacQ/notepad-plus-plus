@@ -48,6 +48,12 @@ protected:
 	{
 		if (isSortingSpecificColumns())
 		{
+			// prevent an std::out_of_range exception
+			if (input.length() < _fromColumn)
+			{
+				return TEXT("");
+			}
+
 			return input.substr(_fromColumn, 1 + _toColumn - _fromColumn);
 		}
 		else
@@ -156,7 +162,12 @@ public:
 					else if (aChunkIsNum)
 					{
 						size_t delta = 0;
-						compareResult = std::stoll(a.substr(i)) - std::stoll(b.substr(i), &delta);
+
+						// stoll crashes if number exceeds the limit for unsigned long long
+						// Maximum value for a variable of type unsigned long long | 18446744073709551615
+						// So take the max length 18 to convert the number
+						const size_t maxLen = 18;
+						compareResult = std::stoll(a.substr(i, maxLen)) - std::stoll(b.substr(i, maxLen), &delta);
 						i += delta;
 					}
 					// Both are strings
@@ -206,7 +217,12 @@ public:
 					else if (aChunkIsNum)
 					{
 						size_t delta = 0;
-						compareResult = std::stoll(a.substr(i)) - std::stoll(b.substr(i), &delta);
+
+						// stoll crashes if number exceeds the limit for unsigned long long
+						// Maximum value for a variable of type unsigned long long | 18446744073709551615
+						// So take the max length 18 to convert the number
+						const size_t maxLen = 18;
+						compareResult = std::stoll(a.substr(i, maxLen)) - std::stoll(b.substr(i, maxLen), &delta);
 						i += delta;
 					}
 					// Both are strings

@@ -303,9 +303,9 @@
                     <Item id="48501" name="Générer..."/>
                     <Item id="48502" name="Générer depuis les fichiers..."/>
                     <Item id="48503" name="Générer dans le presse-papiers depuis la selection"/>
-                    <Item id="48501" name="Générer..."/>
-                    <Item id="48502" name="Générer depuis les fichiers..."/>
-                    <Item id="48503" name="Générer dans le presse-papiers depuis la selection"/>
+                    <Item id="48504" name="Générer..."/>
+                    <Item id="48505" name="Générer depuis les fichiers..."/>
+                    <Item id="48506" name="Générer dans le presse-papiers depuis la selection"/>
                     <Item id="48016" name="Modifier/Supprimer une macro..."/>
                     <Item id="48017" name="Modifier/Supprimer une commande..."/>
                     <Item id="48018" name="Éditer le menu contextuel"/>
@@ -966,6 +966,14 @@
                 <Item id="1718" name="Mode étendu (\n, \r, \t, \0, \x...)"/>
                 <Item id="1720" name="&amp;. comprend ligne nouvelle"/>
             </FindInFinder>
+            <DoSaveOrNot title="Sauvegarder"> 
+                <Item id="1761" name="Sauvegarder le fichier &quot;$STR_REPLACE$&quot; ?"/>
+                <Item id="6" name="Oui"/>
+                <Item id="7" name="Non"/>
+                <Item id="2" name="Annuler"/>
+                <Item id="4" name="Oui pour tout"/>
+                <Item id="5" name="Non pour tout"/>
+            </DoSaveOrNot>
         </Dialog>
         <MessageBox>
             <CannotMoveDoc title="Déplacement vers une nouvelle instance Notepad++" message="Le document est en cours d'utilisation, le sauvegarder puis réessayer."/>
@@ -986,7 +994,6 @@
 vous devez activer &quot;Open all files of folder instead of launching Folder as Workspace on folder dropping&quot; in &quot;Default Directory&quot; section of Preferences dialog to make this operation work."/>
             <SortingError title="Erreur de tri" message="Impossible d'effectuer le tri numérique à cause de la ligne $INT_REPLACE$."/>
             <BufferInvalidWarning title="Échec de sauvegarde" message="Cannot save: Buffer is invalid."/>
-            <DoSaveOrNot title="Sauvegarder" message="Sauvegarder le fichier &quot;$STR_REPLACE$&quot; ?"/>
             <DoCloseOrNot title="Conserver un fichier non existant" message="Le fichier &quot;$STR_REPLACE$&quot; n'existe plus.
 Conserver ce fichier dans l'éditeur ?"/>
             <DoDeleteOrNot title="Supprimer fichier" message="Le fichier &quot;$STR_REPLACE$&quot;
@@ -1044,6 +1051,10 @@ Voulez-vous lancer Notepad++ en mode Administrateur ?"/>
             <OpenInAdminModeWithoutCloseCurrent title="L'enregistrement a échoué" message="Le fichier ne peut pas être enregistré et il est peut-être protégé.
 Voulez-vous lancer Notepad++ en mode Administrateur ?"/>
             <OpenInAdminModeFailed title="L'ouverture en mode Administrateur a échoué" message="Notepad++ ne peut pas être lancé en mode Administrateur."/>
+			<ExitToUpdatePlugins title="Notepad++ sera fermé" message="Si vous cliquez Oui, vous allez quitter Notepad++ pour poursuivre les operations.
+Notepad++ sera relancé après.
+Voulez-vous les poursuivez ?"/>
+            <NeedToRestartToLoadPlugins title="Vous devez redémarrer Notepad++" message="Vous devez redémarrer Notepad++ pour charger les plugins installés."/>
         </MessageBox>
         <ClipboardHistory>
             <PanelTitle name="Historique du presse-papiers"/>

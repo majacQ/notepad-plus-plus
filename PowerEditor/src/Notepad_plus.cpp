@@ -532,7 +532,7 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	::DrawMenuBar(hwnd);
 
 
-	if (_pluginsManager.hasPlugins() && pluginsTrans != TEXT(""))
+	if (pluginsTrans != TEXT(""))
 	{
 		::ModifyMenu(_mainMenuHandle, MENUINDEX_PLUGINS, MF_BYPOSITION, 0, pluginsTrans.c_str());
 	}
@@ -564,6 +564,14 @@ LRESULT Notepad_plus::init(HWND hwnd)
 		{	//no predefined name, get name from menu and use that
 			::GetMenuString(_mainMenuHandle, csc.getID(), menuName, 64, MF_BYCOMMAND);
 			csc.setName(purgeMenuItemString(menuName, true).c_str());
+		}
+		else
+		{
+			// The menu name is already present (e.g. "Restore recent close file")
+			// Now get the localized name if possible
+			generic_string localizedMenuName = _nativeLangSpeaker.getNativeLangMenuString(csc.getID());
+			if(!localizedMenuName.empty())
+				csc.setName(purgeMenuItemString(localizedMenuName.c_str(), true).c_str());
 		}
 	}
 	//Translate non-menu shortcuts
@@ -1862,15 +1870,15 @@ void Notepad_plus::filePrint(bool showDialog)
 	printer.doPrint();
 }
 
-int Notepad_plus::doSaveOrNot(const TCHAR *fn)
+int Notepad_plus::doSaveOrNot(const TCHAR* fn, bool isMulti)
 {
-	return _nativeLangSpeaker.messageBox("DoSaveOrNot",
-		_pPublicInterface->getHSelf(),
-		TEXT("Save file \"$STR_REPLACE$\" ?"),
-		TEXT("Save"),
-		MB_YESNOCANCEL | MB_ICONQUESTION | MB_APPLMODAL,
-		0, // not used
-		fn);
+	DoSaveOrNotBox doSaveOrNotBox;
+	doSaveOrNotBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), fn, isMulti);
+	doSaveOrNotBox.doDialog(_nativeLangSpeaker.isRTL());
+	int buttonID = doSaveOrNotBox.getClickedButtonId();
+	doSaveOrNotBox.destroy();
+
+	return buttonID;
 }
 
 int Notepad_plus::doReloadOrNot(const TCHAR *fn, bool dirty)
@@ -2669,10 +2677,10 @@ void Notepad_plus::maintainIndentation(TCHAR ch)
 			{
 				indentAmountPrevLine = _pEditView->getLineIndent(prevLine);
 
-				auto startPos = _pEditView->execute(SCI_POSITIONFROMLINE, prevLine);
-				auto endPos = _pEditView->execute(SCI_GETLINEENDPOSITION, prevLine);
+				auto startPos2 = _pEditView->execute(SCI_POSITIONFROMLINE, prevLine);
+				auto endPos2 = _pEditView->execute(SCI_GETLINEENDPOSITION, prevLine);
 				_pEditView->execute(SCI_SETSEARCHFLAGS, SCFIND_REGEXP | SCFIND_POSIX);
-				_pEditView->execute(SCI_SETTARGETRANGE, startPos, endPos);
+				_pEditView->execute(SCI_SETTARGETRANGE, startPos2, endPos2);
 
 				const char braceExpr[] = "[ \t]*\\{.*";
 
@@ -2680,7 +2688,7 @@ void Notepad_plus::maintainIndentation(TCHAR ch)
 				if (posFound != -1 && posFound != -2)
 				{
 					int end = int(_pEditView->execute(SCI_GETTARGETEND));
-					if (end == endPos)
+					if (end == endPos2)
 						indentAmountPrevLine += tabWidth;
 				}
 			}
@@ -3245,7 +3253,6 @@ void Notepad_plus::dropFiles(HDROP hdrop)
 			switchEditViewTo(MAIN_VIEW);
 
 		int filesDropped = ::DragQueryFile(hdrop, 0xffffffff, NULL, 0);
-		BufferID lastOpened = BUFFER_INVALID;
 
 		vector<generic_string> folderPaths;
 		vector<generic_string> filePaths;
@@ -3274,7 +3281,6 @@ void Notepad_plus::dropFiles(HDROP hdrop)
 
 		if (isOldMode || folderPaths.size() == 0) // old mode or new mode + only files
 		{
-
 			BufferID lastOpened = BUFFER_INVALID;
 			for (int i = 0; i < filesDropped; ++i)
 			{
@@ -3305,10 +3311,6 @@ void Notepad_plus::dropFiles(HDROP hdrop)
 			launchFileBrowser(folderPaths);
 		}
 
-		if (lastOpened != BUFFER_INVALID) 
-		{
-			switchToFile(lastOpened);
-		}
 		::DragFinish(hdrop);
 		// Put Notepad_plus to forefront
 		// May not work for Win2k, but OK for lower versions
@@ -5026,7 +5028,7 @@ bool Notepad_plus::str2Cliboard(const generic_string & str2cpy)
 
 //ONLY CALL IN CASE OF EMERGENCY: EXCEPTION
 //This function is destructive
-bool Notepad_plus::emergency(generic_string emergencySavedDir)
+bool Notepad_plus::emergency(const generic_string& emergencySavedDir)
 {
     ::CreateDirectory(emergencySavedDir.c_str(), NULL);
 	return dumpFiles(emergencySavedDir.c_str(), TEXT("File"));
@@ -5129,6 +5131,10 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 			}
 			case DOC_MODIFIED:	//ask for reloading
 			{
+				// Since it is being monitored DOC_NEEDRELOAD is going to handle the change.
+				if (buffer->isMonitoringOn())
+					break;
+
 				bool autoUpdate = (nppGUI._fileAutoDetection & cdAutoUpdate) ? true : false;
 				if (!autoUpdate || buffer->isDirty())
 				{
@@ -5328,10 +5334,10 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 	_linkTriggered = true;
 }
 
-void Notepad_plus::loadCommandlineParams(const TCHAR * commandLine, const CmdLineParamsDTO * pCmdParams)
+std::vector<generic_string> Notepad_plus::loadCommandlineParams(const TCHAR * commandLine, const CmdLineParamsDTO * pCmdParams)
 {
 	if (!commandLine || ! pCmdParams)
-		return;
+		return std::vector<generic_string>();
 
 	NppParameters *nppParams = NppParameters::getInstance();
 	FileNameStringSplitter fnss(commandLine);
@@ -5344,7 +5350,7 @@ void Notepad_plus::loadCommandlineParams(const TCHAR * commandLine, const CmdLin
 		{
 			loadSession(session2Load);
 		}
-		return;
+		return std::vector<generic_string>();
 	}
 
  	LangType lt = pCmdParams->_langType;
@@ -5353,12 +5359,20 @@ void Notepad_plus::loadCommandlineParams(const TCHAR * commandLine, const CmdLin
     int cpos = pCmdParams->_pos2go;
 	bool recursive = pCmdParams->_isRecursive;
 	bool readOnly = pCmdParams->_isReadOnly;
+	bool openFoldersAsWorkspace = pCmdParams->_openFoldersAsWorkspace;
+
+	if (openFoldersAsWorkspace)
+	{
+		// All the filepath in argument will be used as folder in workspace
+		// call launchFileBrowser later with fnss
+		return fnss.getFileNames();
+	}
 
 	BufferID lastOpened = BUFFER_INVALID;
 	for (int i = 0, len = fnss.size(); i < len ; ++i)
 	{
 		const TCHAR *pFn = fnss.getFileName(i);
-		if (!pFn) return;
+		if (!pFn) return std::vector<generic_string>();
 
 		BufferID bufID = doOpen(pFn, recursive, readOnly);
 		if (bufID == BUFFER_INVALID)	//cannot open file
@@ -5401,6 +5415,8 @@ void Notepad_plus::loadCommandlineParams(const TCHAR * commandLine, const CmdLin
     {
 		switchToFile(lastOpened);
 	}
+
+	return fnss.getFileNames();
 }
 
 
@@ -5654,7 +5670,7 @@ bool Notepad_plus::reloadLang()
 
 	int indexWindow = ::GetMenuItemCount(_mainMenuHandle) - 3;
 
-	if (_pluginsManager.hasPlugins() && pluginsTrans != TEXT(""))
+	if (pluginsTrans != TEXT(""))
 	{
 		::ModifyMenu(_mainMenuHandle, indexWindow - 1, MF_BYPOSITION, 0, pluginsTrans.c_str());
 	}
@@ -5684,8 +5700,18 @@ bool Notepad_plus::reloadLang()
 	for (size_t i = 0; i < len; ++i)
 	{
 		CommandShortcut & csc = shortcuts[i];
-		::GetMenuString(_mainMenuHandle, csc.getID(), menuName, 64, MF_BYCOMMAND);
-		csc.setName(purgeMenuItemString(menuName, true).c_str());
+		// If menu item is not present (e.g. "Restore recent close file" might not present initially)
+		// then fill the localized string directly
+		if (::GetMenuString(_mainMenuHandle, csc.getID(), menuName, 64, MF_BYCOMMAND))
+		{
+			csc.setName(purgeMenuItemString(menuName, true).c_str());
+		}
+		else
+		{
+			generic_string localizedMenuName = _nativeLangSpeaker.getNativeLangMenuString(csc.getID());
+			if (!localizedMenuName.empty())
+				csc.setName(purgeMenuItemString(localizedMenuName.c_str(), true).c_str());
+		}
 	}
 	_accelerator.updateFullMenu();
 
@@ -5905,7 +5931,7 @@ void Notepad_plus::launchAnsiCharPanel()
 	_pAnsiCharPanel->display();
 }
 
-void Notepad_plus::launchFileBrowser(const vector<generic_string> & folders)
+void Notepad_plus::launchFileBrowser(const vector<generic_string> & folders, bool fromScratch)
 {
 	if (!_pFileBrowser)
 	{
@@ -5944,6 +5970,11 @@ void Notepad_plus::launchFileBrowser(const vector<generic_string> & folders)
 
 		_pFileBrowser->setBackgroundColor(bgColor);
 		_pFileBrowser->setForegroundColor(fgColor);
+	}
+
+	if (fromScratch)
+	{
+		_pFileBrowser->deleteAllFromTree();
 	}
 
 	for (size_t i = 0; i <folders.size(); ++i)
@@ -6244,7 +6275,7 @@ static const QuoteParams quotes[] =
 	{TEXT("Anonymous #86"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Farts are just the ghosts of the things we eat.")},
 	{TEXT("Anonymous #87"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("I promised I would never kill someone who had my blood.\nBut that mosquito made me break my word.")},
 	{TEXT("Anonymous #88"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("A foo walks into a bar,\ntakes a look around and\nsays \"Hello World!\".")},
-	//{TEXT'"Anonymous #89"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("")},
+	{TEXT("Anonymous #89"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("The biggest step in any relationship isn't the first kiss.\nIt's the first fart.")},
 	{TEXT("Anonymous #90"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Clapping:\n(verb)\nRepeatedly high-fiving yourself for someone else's accomplishments.")},
 	{TEXT("Anonymous #91"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("CV: ctrl-C, ctrl-V")},
 	{TEXT("Anonymous #92"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Mondays are not so bad.\nIt's your job that sucks.")},
@@ -6259,7 +6290,7 @@ static const QuoteParams quotes[] =
 	{TEXT("Anonymous #101"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("It's always sad when a man and his dick share only one brain...\nand it turns out to be the dick's.")},
 	{TEXT("Anonymous #102"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("If IE is brave enough to ask you to set it as your default browser,\ndon't tell me you dare not ask a girl out.")},
 	{TEXT("Anonymous #104"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("The main idea of \"Inception\":\nif you run a VM inside a VM inside a VM inside a VM inside a VM,\neverything will be very slow.")},
-	//{TEXT("Anonymous #105"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("")},
+	{TEXT("Anonymous #105"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("The best antivirus is common sense.")},
 	{TEXT("Anonymous #106"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("When I die, I want to go peacefully like my grandfather did, in his sleep\n- not screaming, like the passengers in his car.")},
 	{TEXT("Anonymous #107"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Remember, YOUR God is real.\nAll those other Gods are ridiculous, made-up nonsense.\nBut not yours.\nYour God is real. Whichever one that is.")},
 	{TEXT("Anonymous #108"), QuoteParams::rapid, true, SC_CP_UTF8, L_CSS, TEXT("#your-mom {\n	width: 100000000000000000000px;\n	float: nope;\n}\n")},
@@ -6277,7 +6308,7 @@ static const QuoteParams quotes[] =
 	{TEXT("Anonymous #120"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("GRAMMAR\nThe difference between knowing your shit and knowing you're shit.")},
 	{TEXT("Anonymous #121"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("5 out of 6 people agree that Russian roulette is completely safe.")},
 	{TEXT("Anonymous #122"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("Nerd?\nI prefer the term \"Intellectual badass\".")},
-	//{"Anonymous #123"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("")},
+	{TEXT("Anonymous #123"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("I know every digit of π,\njust not in the right order.")},
 	{TEXT("Anonymous #124"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("You don't need religion to have morals.\nIf you can't determine right from wrong then you lack empathy, not religion.")},
 	{TEXT("Anonymous #125"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Pooping with the door opened is the meaning of true freedom.")},
 	{TEXT("Anonymous #126"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Social media does not make people stupid.\nIt just makes stupid people more visible.")},
@@ -6309,6 +6340,13 @@ static const QuoteParams quotes[] =
 	{TEXT("Anonymous #152"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("A SQL query goes into a bar, walks up to two tables and asks, \"Can I join you?\"")},
 	{TEXT("Anonymous #153"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("You are not fat, you are just more visible.")},
 	{TEXT("Anonymous #154"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Minimalist\n (.   .)\n  )   (\n (  Y  )\nASCII Art")},
+	{TEXT("Anonymous #155"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Parallel lines have so much in common...\nIt's a shame that they'll never meet.")},
+	{TEXT("Anonymous #156"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Declare variables, not war.\nExecute programs, not people.")},
+	{TEXT("Anonymous #157"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("I can't see an end. I have no control and I don't think there's any escape. I don't even have a home anymore.\nI think it's time for a new keyboard.")},
+	{TEXT("Anonymous #158"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("6.9\nA little fun interrupted by a period.")},
+	{TEXT("Anonymous #159"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("I love anal\n-yzing all data before making assumptions.")},
+	{TEXT("Anonymous #160"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("So I took off her shirt. Then she said,\n\"Take off my shirt.\"\nI took off her shirt.\n\"Take off my shoes.\"\nI took off her shoes.\n\"Now take off my bra and panties.\"\nand so I took them off.\nThen she looked at me and said\n\"I don't want to catch you wearing my things ever again.\"")},
+	{TEXT("OOP"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("If you want to treat women as objects,\ndo it with class.")},
 	{TEXT("Internet #1"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("If you spell \"Nothing\" backwards, it becomes \"Gnihton\" which also means nothing.")},
 	{TEXT("Internet #404"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Quote not Found")},
 	{TEXT("Mary Oliver"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Someone I loved once gave me a box full of darkness.\nIt took me years to understand that this, too, was a gift.")},

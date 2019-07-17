@@ -33,7 +33,7 @@
 
 using namespace std;
 
-static bool isInList(generic_string word, const vector<generic_string> & wordArray)
+static bool isInList(const generic_string& word, const vector<generic_string> & wordArray)
 {
 	for (size_t i = 0, len = wordArray.size(); i < len; ++i)
 		if (wordArray[i] == word)
@@ -43,7 +43,12 @@ static bool isInList(generic_string word, const vector<generic_string> & wordArr
 
 static bool isAllDigits(const generic_string &str)
 {
-	return std::all_of(str.begin(), str.end(), ::isdigit);
+	for (const auto& i : str)
+	{
+		if (i < 48 || i > 57)
+			return false;
+	}
+	return true;
 }
 
 
@@ -162,7 +167,7 @@ void AutoCompletion::getWordArray(vector<generic_string> & wordArray, TCHAR *beg
 	}
 }
 
-static generic_string addTrailingSlash(generic_string path)
+static generic_string addTrailingSlash(const generic_string& path)
 {
 	if (path.length() >=1 && path[path.length() - 1] == '\\')
 		return path;
@@ -170,7 +175,7 @@ static generic_string addTrailingSlash(generic_string path)
 		return path + L"\\";
 }
 
-static generic_string removeTrailingSlash(generic_string path)
+static generic_string removeTrailingSlash(const generic_string& path)
 {
 	if (path.length() >= 1 && path[path.length() - 1] == '\\')
 		return path.substr(0, path.length() - 1);
@@ -178,13 +183,13 @@ static generic_string removeTrailingSlash(generic_string path)
 		return path;
 }
 
-static bool isDirectory(generic_string path)
+static bool isDirectory(const generic_string& path)
 {
 	DWORD type = ::GetFileAttributes(path.c_str());
 	return type != INVALID_FILE_ATTRIBUTES && (type & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-static bool isFile(generic_string path)
+static bool isFile(const generic_string& path)
 {
 	DWORD type = ::GetFileAttributes(path.c_str());
 	return type != INVALID_FILE_ATTRIBUTES && ! (type & FILE_ATTRIBUTE_DIRECTORY);
@@ -196,7 +201,7 @@ static bool isAllowedBeforeDriveLetter(TCHAR c)
 	return c == '\'' || c == '"' || c == '(' || std::isspace(c, loc);
 }
 
-static bool getRawPath(generic_string input, generic_string &rawPath_out)
+static bool getRawPath(const generic_string& input, generic_string &rawPath_out)
 {
 	// Try to find a path in the given input.
 	// Algorithm: look for a colon. The colon must be preceded by an alphabetic character.
@@ -217,7 +222,7 @@ static bool getRawPath(generic_string input, generic_string &rawPath_out)
 	return true;
 }
 
-static bool getPathsForPathCompletion(generic_string input, generic_string &rawPath_out, generic_string &pathToMatch_out)
+static bool getPathsForPathCompletion(const generic_string& input, generic_string &rawPath_out, generic_string &pathToMatch_out)
 {
 	generic_string rawPath;
 	if (! getRawPath(input, rawPath))
@@ -749,7 +754,7 @@ void AutoCompletion::update(int character)
 	}
 }
 
-void AutoCompletion::callTipClick(int direction) {
+void AutoCompletion::callTipClick(size_t direction) {
 	if (!_funcCompletionActive)
 		return;
 
@@ -772,8 +777,7 @@ bool AutoCompletion::setLanguage(LangType language) {
 	wcscat_s(path, getApiFileName());
 	wcscat_s(path, TEXT(".xml"));
 
-	if (_pXmlFile)
-		delete _pXmlFile;
+	delete _pXmlFile;
 
 	_pXmlFile = new TiXmlDocument(path);
 	_funcCompletionActive = _pXmlFile->LoadFile();

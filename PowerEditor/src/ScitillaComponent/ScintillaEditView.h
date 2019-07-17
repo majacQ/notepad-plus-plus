@@ -98,6 +98,7 @@ const int CP_GREEK = 1253;
 
 const bool fold_uncollapse = true;
 const bool fold_collapse = false;
+#define MAX_FOLD_COLLAPSE_LEVEL	8
 
 enum TextCase : UCHAR
 {
@@ -206,8 +207,7 @@ public:
 			{
 				for (StyleMap::iterator it2(it->second->begin()) ; it2 != it->second->end() ; ++it2)
 				{
-					if (it2->second._fontName != NULL)
-						delete [] it2->second._fontName;
+					delete [] it2->second._fontName;
 				}
 				delete it->second;
 			}
@@ -245,7 +245,7 @@ public:
 	void replaceSelWith(const char * replaceText);
 
 	int getSelectedTextCount() {
-		CharacterRange range = getSelection();
+		Sci_CharacterRange range = getSelection();
 		return (range.cpMax - range.cpMin);
 	};
 
@@ -282,8 +282,8 @@ public:
 		return int(execute(SCI_GETLENGTH));
 	};
 
-	CharacterRange getSelection() const {
-		CharacterRange crange;
+	Sci_CharacterRange getSelection() const {
+		Sci_CharacterRange crange;
 		crange.cpMin = long(execute(SCI_GETSELECTIONSTART));
 		crange.cpMax = long(execute(SCI_GETSELECTIONEND));
 		return crange;
@@ -337,8 +337,8 @@ public:
 		return (execute(SCI_GETMARGINWIDTHN, witchMarge, 0) != 0);
     };
 
-    void updateBeginEndSelectPosition(const bool is_insert, const int position, const int length);
-    void marginClick(int position, int modifiers);
+    void updateBeginEndSelectPosition(bool is_insert, size_t position, size_t length);
+    void marginClick(Sci_Position position, int modifiers);
 
     void setMakerStyle(folderStyle style) {
 		bool display;
@@ -478,18 +478,11 @@ public:
 		// return -1 if it's multi-selection or rectangle selection
 		if ((execute(SCI_GETSELECTIONS) > 1) || execute(SCI_SELECTIONISRECTANGLE))
 			return -1;
-		auto size_selected = execute(SCI_GETSELTEXT);
-		char *selected = new char[size_selected + 1];
-		execute(SCI_GETSELTEXT, 0, reinterpret_cast<LPARAM>(selected));
-		char *c = selected;
-		long length = 0;
-		while (*c != '\0')
-		{
-			if ( (*c & 0xC0) != 0x80)
-				++length;
-			++c;
-		}
-		delete [] selected;
+
+		long start = long(execute(SCI_GETSELECTIONSTART));
+		long end = long(execute(SCI_GETSELECTIONEND));
+		long length = long(execute(SCI_COUNTCHARACTERS, start, end));
+
 		return length;
 	};
 
@@ -533,7 +526,7 @@ public:
 
 	void performGlobalStyles();
 
-	void expand(int &line, bool doExpand, bool force = false, int visLevels = 0, int level = -1);
+	void expand(size_t& line, bool doExpand, bool force = false, int visLevels = 0, int level = -1);
 
 	std::pair<int, int> getSelectionLinesRange() const;
     void currentLinesUp() const;
@@ -567,10 +560,12 @@ public:
 			::MessageBox(_hSelf, TEXT("This function needs a newer OS version."), TEXT("Change Case Error"), MB_OK | MB_ICONHAND);
 	};
 
+	bool isFoldIndentationBased() const;
+	void collapseFoldIndentationBased(int level2Collapse, bool mode);
 	void collapse(int level2Collapse, bool mode);
 	void foldAll(bool mode);
 	void fold(size_t line, bool mode);
-	bool isFolded(int line){
+	bool isFolded(size_t line) {
 		return (execute(SCI_GETFOLDEXPANDED, line) != 0);
 	};
 	void foldCurrentPos(bool mode);
@@ -585,7 +580,7 @@ public:
 	void columnReplace(ColumnModeInfos & cmi, const TCHAR *str);
 	void columnReplace(ColumnModeInfos & cmi, int initial, int incr, int repeat, UCHAR format);
 
-	void foldChanged(int line, int levelNow, int levelPrev);
+	void foldChanged(size_t line, int levelNow, int levelPrev);
 	void clearIndicator(int indicatorNumber) {
 		int docStart = 0;
 		int docEnd = getCurrentDocLen();
@@ -605,11 +600,11 @@ public:
 
 	bool markerMarginClick(int lineNumber);	//true if it did something
 	void notifyMarkers(Buffer * buf, bool isHide, int location, bool del);
-	void runMarkers(bool doHide, int searchStart, bool endOfDoc, bool doDelete);
+	void runMarkers(bool doHide, size_t searchStart, bool endOfDoc, bool doDelete);
 
 	bool isSelecting() const {
-		static CharacterRange previousSelRange = getSelection();
-		CharacterRange currentSelRange = getSelection();
+		static Sci_CharacterRange previousSelRange = getSelection();
+		Sci_CharacterRange currentSelRange = getSelection();
 
 		if (currentSelRange.cpMin == currentSelRange.cpMax)
 		{
@@ -683,7 +678,7 @@ protected:
 	typedef std::unordered_map<BufferID, StyleMap*> BufferStyleMap;
 	BufferStyleMap _hotspotStyles;
 
-	int _beginSelectPosition = -1;
+	long long _beginSelectPosition = -1;
 
 	static std::string _defaultCharList;
 
