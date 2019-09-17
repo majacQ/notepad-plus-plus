@@ -34,6 +34,8 @@
 #include "Parameters.h"
 #include "localization.h"
 
+#pragma warning(disable : 4996) // for GetVersion()
+
 INT_PTR CALLBACK AboutDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -43,13 +45,13 @@ INT_PTR CALLBACK AboutDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lPara
 			HWND compileDateHandle = ::GetDlgItem(_hSelf, IDC_BUILD_DATETIME);
 			generic_string buildTime = TEXT("Build time : ");
 
-			WcharMbcsConvertor *wmc = WcharMbcsConvertor::getInstance();
-			buildTime +=  wmc->char2wchar(__DATE__, CP_ACP);
+			WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+			buildTime +=  wmc.char2wchar(__DATE__, CP_ACP);
 			buildTime += TEXT(" - ");
-			buildTime +=  wmc->char2wchar(__TIME__, CP_ACP);
+			buildTime +=  wmc.char2wchar(__TIME__, CP_ACP);
 
-			NppParameters *pNppParam = NppParameters::getInstance();
-			LPCTSTR bitness = pNppParam ->isx64() ? TEXT("(64-bit)") : TEXT("(32-bit)");
+			NppParameters& nppParam = NppParameters::getInstance();
+			LPCTSTR bitness = nppParam.isx64() ? TEXT("(64-bit)") : TEXT("(32-bit)");
 			::SetDlgItemText(_hSelf, IDC_VERSION_BIT, bitness);
 
 			::SendMessage(compileDateHandle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(buildTime.c_str()));
@@ -67,7 +69,7 @@ INT_PTR CALLBACK AboutDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lPara
 
 			getClientRect(_rc);
 
-			ETDTProc enableDlgTheme = (ETDTProc)pNppParam->getEnableThemeDlgTexture();
+			ETDTProc enableDlgTheme = (ETDTProc)nppParam.getEnableThemeDlgTexture();
 			if (enableDlgTheme)
 			{
 				enableDlgTheme(_hSelf, ETDT_ENABLETAB);
@@ -126,20 +128,20 @@ INT_PTR CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM /
 	{
 		case WM_INITDIALOG:
 		{
-			NppParameters *pNppParam = NppParameters::getInstance();
+			NppParameters& nppParam = NppParameters::getInstance();
 
 			// Notepad++ version
 			_debugInfoStr = NOTEPAD_PLUS_VERSION;
-			_debugInfoStr += pNppParam->isx64() ? TEXT("   (64-bit)") : TEXT("   (32-bit)");
+			_debugInfoStr += nppParam.isx64() ? TEXT("   (64-bit)") : TEXT("   (32-bit)");
 			_debugInfoStr += TEXT("\r\n");
 
 			// Build time
 			_debugInfoStr += TEXT("Build time : ");
 			generic_string buildTime;
-			WcharMbcsConvertor *wmc = WcharMbcsConvertor::getInstance();
-			buildTime += wmc->char2wchar(__DATE__, CP_ACP);
+			WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+			buildTime += wmc.char2wchar(__DATE__, CP_ACP);
 			buildTime += TEXT(" - ");
-			buildTime += wmc->char2wchar(__TIME__, CP_ACP);
+			buildTime += wmc.char2wchar(__TIME__, CP_ACP);
 			_debugInfoStr += buildTime;
 			_debugInfoStr += TEXT("\r\n");
 
@@ -157,7 +159,7 @@ INT_PTR CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM /
 
 			// local conf
 			_debugInfoStr += TEXT("Local Conf mode : ");
-			bool doLocalConf = (NppParameters::getInstance())->isLocal();
+			bool doLocalConf = (NppParameters::getInstance()).isLocal();
 			_debugInfoStr += (doLocalConf ? TEXT("ON") : TEXT("OFF"));
 			_debugInfoStr += TEXT("\r\n");
 
@@ -198,7 +200,7 @@ INT_PTR CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM /
 			// Get alternative OS information
 			if (szProductName[0] == '\0')
 			{
-				generic_sprintf(szProductName, TEXT("%s"), (NppParameters::getInstance())->getWinVersionStr().c_str());
+				generic_sprintf(szProductName, TEXT("%s"), (NppParameters::getInstance()).getWinVersionStr().c_str());
 			}
 			if (szCurrentBuildNumber[0] == '\0')
 			{
@@ -212,7 +214,7 @@ INT_PTR CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM /
 			_debugInfoStr += TEXT("OS Name : ");
 			_debugInfoStr += szProductName;
 			_debugInfoStr += TEXT(" (");
-			_debugInfoStr += (NppParameters::getInstance())->getWinVerBitStr();
+			_debugInfoStr += (NppParameters::getInstance()).getWinVerBitStr();
 			_debugInfoStr += TEXT(") ");
 			_debugInfoStr += TEXT("\r\n");
 			
@@ -319,7 +321,7 @@ void DoSaveOrNotBox::changeLang()
 {
 	generic_string msg;
 	generic_string defaultMessage = TEXT("Save file \"$STR_REPLACE$\" ?");
-	NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance()->getNativeLangSpeaker();
+	NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
 
 	if (nativeLangSpeaker->changeDlgLang(_hSelf, "DoSaveOrNot"))
 	{

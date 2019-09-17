@@ -36,6 +36,8 @@
 #include "localizationString.h"
 #include "UserDefineDialog.h"
 
+#pragma warning(disable : 4996) // for GetVersionEx()
+
 using namespace std;
 
 
@@ -548,6 +550,8 @@ int getKwClassFromName(const TCHAR *str)
 	if (!lstrcmp(TEXT("type3"), str)) return LANG_INDEX_TYPE3;
 	if (!lstrcmp(TEXT("type4"), str)) return LANG_INDEX_TYPE4;
 	if (!lstrcmp(TEXT("type5"), str)) return LANG_INDEX_TYPE5;
+	if (!lstrcmp(TEXT("type6"), str)) return LANG_INDEX_TYPE6;
+	if (!lstrcmp(TEXT("type7"), str)) return LANG_INDEX_TYPE7;
 
 	if ((str[1] == '\0') && (str[0] >= '0') && (str[0] <= '8')) // up to KEYWORDSET_MAX
 		return str[0] - '0';
@@ -827,11 +831,7 @@ winVer NppParameters::getWindowsVersion()
    return WV_UNKNOWN;
 }
 
-
-
-NppParameters * NppParameters::_pSelf = new NppParameters;
-
-int FileDialog::_dialogFileBoxId = (NppParameters::getInstance())->getWinVersion() < WV_W2K?edt1:cmb13;
+int FileDialog::_dialogFileBoxId = (NppParameters::getInstance()).getWinVersion() < WV_W2K?edt1:cmb13;
 
 
 NppParameters::NppParameters()
@@ -1061,8 +1061,8 @@ bool NppParameters::load()
 	{
 		// Read cloud choice
 		std::string cloudChoiceStr = getFileContent(cloudChoicePath.c_str());
-		WcharMbcsConvertor *wmc = WcharMbcsConvertor::getInstance();
-		std::wstring cloudChoiceStrW = wmc->char2wchar(cloudChoiceStr.c_str(), SC_CP_UTF8);
+		WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+		std::wstring cloudChoiceStrW = wmc.char2wchar(cloudChoiceStr.c_str(), SC_CP_UTF8);
 
 		if (not cloudChoiceStrW.empty() and ::PathFileExists(cloudChoiceStrW.c_str()))
 		{
@@ -1385,7 +1385,7 @@ bool NppParameters::load()
 	PathAppend(_sessionPath, TEXT("session.xml"));
 
 	// Don't load session.xml if not required in order to speed up!!
-	const NppGUI & nppGUI = (NppParameters::getInstance())->getNppGUI();
+	const NppGUI & nppGUI = (NppParameters::getInstance()).getNppGUI();
 	if (nppGUI._rememberLastSession)
 	{
 		_pXmlSessionDoc = new TiXmlDocument(_sessionPath);
@@ -1439,8 +1439,6 @@ void NppParameters::destroyInstance()
 	delete _pXmlContextMenuDocA;
 	delete _pXmlSessionDoc;
 	delete _pXmlBlacklistDoc;
-	delete _pSelf;
-	_pSelf = nullptr;
 }
 
 
@@ -1686,11 +1684,11 @@ bool NppParameters::getUserParametersFromXmlTree()
 std::pair<unsigned char, unsigned char> NppParameters::addUserDefineLangsFromXmlTree(TiXmlDocument *tixmldoc)
 {
 	if (!tixmldoc)
-		return std::pair<unsigned char, unsigned char>(0, 0);
+		return std::make_pair(static_cast<unsigned char>(0), static_cast<unsigned char>(0));
 
 	TiXmlNode *root = tixmldoc->FirstChild(TEXT("NotepadPlus"));
 	if (!root)
-		return std::pair<unsigned char, unsigned char>(0, 0);
+		return std::make_pair(static_cast<unsigned char>(0), static_cast<unsigned char>(0));
 
 	return feedUserLang(root);
 }
@@ -1919,7 +1917,7 @@ bool NppParameters::getContextMenuFromXmlTree(HMENU mainMenuHadle, HMENU plugins
 	if (!root)
 		return false;
 
-	WcharMbcsConvertor *wmc = WcharMbcsConvertor::getInstance();
+	WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
 
 	TiXmlNodeA *contextMenuRoot = root->FirstChildElement("ScintillaContextMenu");
 	if (contextMenuRoot)
@@ -1933,8 +1931,8 @@ bool NppParameters::getContextMenuFromXmlTree(HMENU mainMenuHadle, HMENU plugins
 
 			generic_string folderName;
 			generic_string displayAs;
-			folderName = folderNameA?wmc->char2wchar(folderNameA, SC_CP_UTF8):TEXT("");
-			displayAs = displayAsA?wmc->char2wchar(displayAsA, SC_CP_UTF8):TEXT("");
+			folderName = folderNameA?wmc.char2wchar(folderNameA, SC_CP_UTF8):TEXT("");
+			displayAs = displayAsA?wmc.char2wchar(displayAsA, SC_CP_UTF8):TEXT("");
 
 			int id;
 			const char *idStr = (childNode->ToElement())->Attribute("id", &id);
@@ -1949,8 +1947,8 @@ bool NppParameters::getContextMenuFromXmlTree(HMENU mainMenuHadle, HMENU plugins
 
 				generic_string menuEntryName;
 				generic_string menuItemName;
-				menuEntryName = menuEntryNameA?wmc->char2wchar(menuEntryNameA, SC_CP_UTF8):TEXT("");
-				menuItemName = menuItemNameA?wmc->char2wchar(menuItemNameA, SC_CP_UTF8):TEXT("");
+				menuEntryName = menuEntryNameA?wmc.char2wchar(menuEntryNameA, SC_CP_UTF8):TEXT("");
+				menuItemName = menuItemNameA?wmc.char2wchar(menuItemNameA, SC_CP_UTF8):TEXT("");
 
 				if (not menuEntryName.empty() and not menuItemName.empty())
 				{
@@ -1965,8 +1963,8 @@ bool NppParameters::getContextMenuFromXmlTree(HMENU mainMenuHadle, HMENU plugins
 
 					generic_string pluginName;
 					generic_string pluginCmdName;
-					pluginName = pluginNameA?wmc->char2wchar(pluginNameA, SC_CP_UTF8):TEXT("");
-					pluginCmdName = pluginCmdNameA?wmc->char2wchar(pluginCmdNameA, SC_CP_UTF8):TEXT("");
+					pluginName = pluginNameA?wmc.char2wchar(pluginNameA, SC_CP_UTF8):TEXT("");
+					pluginCmdName = pluginCmdNameA?wmc.char2wchar(pluginCmdNameA, SC_CP_UTF8):TEXT("");
 
 					// if plugin menu existing plls the value of PluginEntryName and PluginCommandItemName are valid
 					if (pluginsMenu && not pluginName.empty() && not pluginCmdName.empty())
@@ -2673,7 +2671,7 @@ std::pair<unsigned char, unsigned char> NppParameters::feedUserLang(TiXmlNode *n
 		}
 	}
 	int iEnd = _nbUserLang;
-	return pair<unsigned char, unsigned char>(iBegin, iEnd);
+	return pair<unsigned char, unsigned char>(static_cast<unsigned char>(iBegin), static_cast<unsigned char>(iEnd));
 }
 
 bool NppParameters::importUDLFromFile(const generic_string& sourceFile)
@@ -2758,8 +2756,8 @@ void NppParameters::setCloudChoice(const TCHAR *pathChoice)
 	}
 	cloudChoicePath += TEXT("choice");
 
-	WcharMbcsConvertor *wmc = WcharMbcsConvertor::getInstance();
-	std::string cloudPathA = wmc->wchar2char(pathChoice, SC_CP_UTF8);
+	WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+	std::string cloudPathA = wmc.wchar2char(pathChoice, SC_CP_UTF8);
 
 	writeFileContent(cloudChoicePath.c_str(), cloudPathA.c_str());
 }
@@ -3755,7 +3753,7 @@ LangType NppParameters::getLangIDFromStr(const TCHAR *langName)
 	LangType l = (LangType)lang;
 	if (l == L_EXTERNAL) //try find external lexer
 	{
-		int id = _pSelf->getExternalLangIndexFromName(langName);
+		int id = NppParameters::getInstance().getExternalLangIndexFromName(langName);
 		if (id != -1) return (LangType)(id + L_EXTERNAL);
 	}
 
@@ -5027,8 +5025,8 @@ void NppParameters::feedGUIParameters(TiXmlNode *node)
 			const TCHAR *charsAddedW = element->Attribute(TEXT("charsAdded"));
 			if (charsAddedW)
 			{
-				WcharMbcsConvertor *wmc = WcharMbcsConvertor::getInstance();
-				_nppGUI._customWordChars = wmc->wchar2char(charsAddedW, SC_CP_UTF8);
+				WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+				_nppGUI._customWordChars = wmc.wchar2char(charsAddedW, SC_CP_UTF8);
 			}
 		}
 		else if (!lstrcmp(nm, TEXT("delimiterSelection")))
@@ -5662,7 +5660,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 		GUIConfigElement->SetAttribute(TEXT("useCustumDir"), _nppGUI._useDir ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("dir"), _nppGUI._backupDir.c_str());
 
-		GUIConfigElement->SetAttribute(TEXT("isSnapshotMode"), _nppGUI.isSnapshotMode() ? TEXT("yes") : TEXT("no"));
+		GUIConfigElement->SetAttribute(TEXT("isSnapshotMode"), _nppGUI._isSnapshotMode ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("snapshotBackupTiming"), static_cast<int32_t>(_nppGUI._snapshotBackupTiming));
 	}
 
@@ -5805,8 +5803,8 @@ void NppParameters::createXmlTreeFromGUIParams()
 		TiXmlElement *GUIConfigElement = (newGUIRoot->InsertEndChild(TiXmlElement(TEXT("GUIConfig"))))->ToElement();
 		GUIConfigElement->SetAttribute(TEXT("name"), TEXT("wordCharList"));
 		GUIConfigElement->SetAttribute(TEXT("useDefault"), _nppGUI._isWordCharDefault ? TEXT("yes") : TEXT("no"));
-		WcharMbcsConvertor *wmc = WcharMbcsConvertor::getInstance();
-		const wchar_t* charsAddStr = wmc->char2wchar(_nppGUI._customWordChars.c_str(), SC_CP_UTF8);
+		WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+		const wchar_t* charsAddStr = wmc.char2wchar(_nppGUI._customWordChars.c_str(), SC_CP_UTF8);
 		GUIConfigElement->SetAttribute(TEXT("charsAdded"), charsAddStr);
 	}
 
