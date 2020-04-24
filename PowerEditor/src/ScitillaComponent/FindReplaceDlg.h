@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -330,6 +330,7 @@ public :
 	};
 
 	void execSavedCommand(int cmd, uptr_t intValue, const generic_string& stringValue);
+	void clearMarks(const FindOption& opt);
 	void setStatusbarMessage(const generic_string & msg, FindStatus staus);
 	Finder * createFinder();
 	bool removeFinder(Finder *finder2remove);
@@ -361,7 +362,7 @@ private :
 
 	HWND _shiftTrickUpTip = nullptr;
 	HWND _2ButtonsTip = nullptr;
-
+	HWND _filterTip = nullptr;
 
 	bool _isRTL = false;
 

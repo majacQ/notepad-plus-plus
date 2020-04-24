@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -32,7 +32,7 @@
 #include "Parameters.h"
 #include "Sorters.h"
 #include "tchar.h"
-#include "verifySignedFile.h"
+#include "verifySignedfile.h"
 
 using namespace std;
 
@@ -138,7 +138,7 @@ LanguageName ScintillaEditView::langNames[L_EXTERNAL+1] = {
 {TEXT("r"),				TEXT("R"),					TEXT("R programming language"),							L_R,			SCLEX_R},
 {TEXT("jsp"),			TEXT("JSP"),				TEXT("JavaServer Pages script file"),					L_JSP,			SCLEX_HTML},
 {TEXT("coffeescript"),	TEXT("CoffeeScript"),		TEXT("CoffeeScript file"),								L_COFFEESCRIPT,	SCLEX_COFFEESCRIPT},
-{TEXT("json"),			TEXT("json"),				TEXT("JSON file"),										L_JSON,			SCLEX_CPP },
+{TEXT("json"),			TEXT("json"),				TEXT("JSON file"),										L_JSON,			SCLEX_JSON },
 {TEXT("javascript.js"), TEXT("JavaScript"),			TEXT("JavaScript file"),								L_JAVASCRIPT,	SCLEX_CPP },
 {TEXT("fortran77"),		TEXT("Fortran fixed form"),	TEXT("Fortran fixed form source file"),					L_FORTRAN_77,	SCLEX_F77},
 {TEXT("baanc"),			TEXT("BaanC"),				TEXT("BaanC File"),										L_BAANC,		SCLEX_BAAN },
@@ -396,7 +396,8 @@ LRESULT ScintillaEditView::scintillaNew_Proc(HWND hwnd, UINT Message, WPARAM wPa
 				return TRUE;
 			}
 
-			if (LOWORD(wParam) & MK_SHIFT) {
+			if (LOWORD(wParam) & MK_SHIFT)
+			{
 				// move 3 columns at a time
 				::CallWindowProc(_scintillaDefaultProc, hwnd, WM_HSCROLL, ((short)HIWORD(wParam) < 0) ? SB_LINERIGHT : SB_LINELEFT, NULL);
 				::CallWindowProc(_scintillaDefaultProc, hwnd, WM_HSCROLL, ((short)HIWORD(wParam) < 0) ? SB_LINERIGHT : SB_LINELEFT, NULL);
@@ -692,20 +693,28 @@ void ScintillaEditView::setEmbeddedJSLexer()
 
 void ScintillaEditView::setJsonLexer()
 {
-	execute(SCI_SETLEXER, SCLEX_CPP);
+	execute(SCI_SETLEXER, SCLEX_JSON);
 
 	const TCHAR *pKwArray[10] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
 	makeStyle(L_JSON, pKwArray);
 
-	basic_string<char> keywordList("");
+	string keywordList;
+	string keywordList2;
 	if (pKwArray[LANG_INDEX_INSTR])
 	{
-		basic_string<wchar_t> kwlW = pKwArray[LANG_INDEX_INSTR];
+		wstring kwlW = pKwArray[LANG_INDEX_INSTR];
 		keywordList = wstring2string(kwlW, CP_ACP);
 	}
 
+	if (pKwArray[LANG_INDEX_INSTR2])
+	{
+		wstring kwlW = pKwArray[LANG_INDEX_INSTR2];
+		keywordList2 = wstring2string(kwlW, CP_ACP);
+	}
+
 	execute(SCI_SETKEYWORDS, 0, reinterpret_cast<LPARAM>(getCompleteKeywordList(keywordList, L_JSON, LANG_INDEX_INSTR)));
+	execute(SCI_SETKEYWORDS, 1, reinterpret_cast<LPARAM>(getCompleteKeywordList(keywordList2, L_JSON, LANG_INDEX_INSTR2)));
 
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold"), reinterpret_cast<LPARAM>("1"));
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.compact"), reinterpret_cast<LPARAM>("0"));
@@ -1242,19 +1251,6 @@ void ScintillaEditView::setLexer(int lexerID, LangType langType, int whichList)
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold"), reinterpret_cast<LPARAM>("1"));
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.compact"), reinterpret_cast<LPARAM>("0"));
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.comment"), reinterpret_cast<LPARAM>("1"));
-
-	ScintillaViewParams & svp = (ScintillaViewParams &)NppParameters::getInstance().getSVP();
-
-	if (svp._indentGuideLineShow)
-	{
-		const auto currentIndentMode = execute(SCI_GETINDENTATIONGUIDES);
-		// Python like indentation, excludes lexers (Nim, VB, YAML, etc.)
-		// that includes tailing empty or whitespace only lines in folding block.
-		const bool pythonLike = (lexerID == SCLEX_PYTHON || lexerID == SCLEX_COFFEESCRIPT || lexerID == SCLEX_HASKELL);
-		const int docIndentMode = pythonLike ? SC_IV_LOOKFORWARD : SC_IV_LOOKBOTH;
-		if (currentIndentMode != docIndentMode)
-			execute(SCI_SETINDENTATIONGUIDES, docIndentMode);
-	}
 }
 
 void ScintillaEditView::makeStyle(LangType language, const TCHAR **keywordArray)
@@ -1762,11 +1758,17 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 	    setSpecialStyle(styleLN);
     }
     setTabSettings(NppParameters::getInstance().getLangFromID(typeDoc));
-	/*
-	execute(SCI_SETSTYLEBITS, 8);	// Always use 8 bit mask in Document class (Document::stylingBitsMask),
-									// in that way Editor::PositionIsHotspot will return correct hotspot styleID.
-									// This value has no effect on LexAccessor::mask.
-									*/
+	
+	if (svp._indentGuideLineShow)
+	{
+		const auto currentIndentMode = execute(SCI_GETINDENTATIONGUIDES);
+		// Python like indentation, excludes lexers (Nim, VB, YAML, etc.)
+		// that includes tailing empty or whitespace only lines in folding block.
+		const bool pythonLike = (typeDoc == L_PYTHON || typeDoc == L_COFFEESCRIPT || typeDoc == L_HASKELL);
+		const int docIndentMode = pythonLike ? SC_IV_LOOKFORWARD : SC_IV_LOOKBOTH;
+		if (currentIndentMode != docIndentMode)
+			execute(SCI_SETINDENTATIONGUIDES, docIndentMode);
+	}
 }
 
 BufferID ScintillaEditView::attachDefaultDoc()
@@ -1791,7 +1793,8 @@ void ScintillaEditView::saveCurrentPos()
 	//Save data so, that the current topline becomes visible again after restoring.
 	int32_t displayedLine = static_cast<int32_t>(execute(SCI_GETFIRSTVISIBLELINE));
 	int32_t docLine = static_cast<int32_t>(execute(SCI_DOCLINEFROMVISIBLE, displayedLine));		//linenumber of the line displayed in the top
-	//int offset = displayedLine - execute(SCI_VISIBLEFROMDOCLINE, docLine);		//use this to calc offset of wrap. If no wrap this should be zero
+	int32_t offset = displayedLine - static_cast<int32_t>(execute(SCI_VISIBLEFROMDOCLINE, docLine));		//use this to calc offset of wrap. If no wrap this should be zero
+	int wrapCount = static_cast<int32_t>(execute(SCI_WRAPCOUNT, docLine));
 
 	Buffer * buf = MainFileManager.getBufferByID(_currentBufferID);
 
@@ -1803,16 +1806,20 @@ void ScintillaEditView::saveCurrentPos()
 	pos._xOffset = static_cast<int>(execute(SCI_GETXOFFSET));
 	pos._selMode = static_cast<int32_t>(execute(SCI_GETSELECTIONMODE));
 	pos._scrollWidth = static_cast<int32_t>(execute(SCI_GETSCROLLWIDTH));
+	pos._offset = offset;
+	pos._wrapCount = wrapCount;
 
 	buf->setPosition(pos, this);
 }
 
-void ScintillaEditView::restoreCurrentPos()
+// restore current position is executed in two steps.
+// The detection wrap state done in the pre step function:
+// if wrap is enabled, then _positionRestoreNeeded is activated
+// so post step function will be cakked in the next SCN_PAINTED message
+void ScintillaEditView::restoreCurrentPosPreStep()
 {
 	Buffer * buf = MainFileManager.getBufferByID(_currentBufferID);
 	Position & pos = buf->getPosition(this);
-
-	execute(SCI_GOTOPOS, 0);	//make sure first line visible by setting caret there, will scroll to top of document
 
 	execute(SCI_SETSELECTIONMODE, pos._selMode);	//enable
 	execute(SCI_SETANCHOR, pos._startPos);
@@ -1824,18 +1831,80 @@ void ScintillaEditView::restoreCurrentPos()
 		execute(SCI_SETXOFFSET, pos._xOffset);
 	}
 	execute(SCI_CHOOSECARETX); // choose current x position
-
 	int lineToShow = static_cast<int32_t>(execute(SCI_VISIBLEFROMDOCLINE, pos._firstVisibleLine));
-	scroll(0, lineToShow);
+	execute(SCI_SETFIRSTVISIBLELINE, lineToShow);
+	if (isWrap())
+	{
+		// Enable flag 'positionRestoreNeeded' so that function restoreCurrentPosPostStep get called
+		// once scintilla send SCN_PAITED notification
+		_positionRestoreNeeded = true;
+	}
+	_restorePositionRetryCount = 0;
+
 }
 
-void ScintillaEditView::restyleBuffer() {
+// If wrap is enabled, the post step function will be called in the next SCN_PAINTED message
+// to scroll several lines to set the first visible line to the correct wrapped line.
+void ScintillaEditView::restoreCurrentPosPostStep()
+{
+	if (!_positionRestoreNeeded)
+		return;
+
+	static int32_t restoreDone = 0;
+	Buffer * buf = MainFileManager.getBufferByID(_currentBufferID);
+	Position & pos = buf->getPosition(this);
+
+	++_restorePositionRetryCount;
+
+	// Scintilla can send several SCN_PAINTED notifications before the buffer is ready to be displayed. 
+	// this post step function is therefore iterated several times in a maximum of 8 iterations. 
+	// 8 is an arbitrary number. 2 is a minimum. Maximum value is unknown.
+	if (_restorePositionRetryCount > 8)
+	{
+		// Abort the position restoring  process. Buffer topology may have changed
+		_positionRestoreNeeded = false;
+		return;
+	}
+	
+	int32_t displayedLine = static_cast<int32_t>(execute(SCI_GETFIRSTVISIBLELINE));
+	int32_t docLine = static_cast<int32_t>(execute(SCI_DOCLINEFROMVISIBLE, displayedLine));		//linenumber of the line displayed in the 
+	
+
+	// check docLine must equals saved position
+	if (docLine != pos._firstVisibleLine)
+	{
+		
+		// Scintilla has paint the buffer but the position is not correct.
+		int lineToShow = static_cast<int32_t>(execute(SCI_VISIBLEFROMDOCLINE, pos._firstVisibleLine));
+		execute(SCI_SETFIRSTVISIBLELINE, lineToShow);
+	}
+	else if (pos._offset > 0)
+	{
+		// don't scroll anything if the wrap count is different than the saved one.
+		// Buffer update may be in progress (in case wrap is enabled)
+		int wrapCount = static_cast<int32_t>(execute(SCI_WRAPCOUNT, docLine));
+		if (wrapCount == pos._wrapCount)
+		{
+			scroll(0, pos._offset);
+			_positionRestoreNeeded = false;
+		}
+	}
+	else
+	{
+		// Buffer position is correct, and there is no scroll to apply
+		_positionRestoreNeeded = false;
+	}
+}
+
+void ScintillaEditView::restyleBuffer()
+{
 	execute(SCI_CLEARDOCUMENTSTYLE);
 	execute(SCI_COLOURISE, 0, -1);
 	_currentBuffer->setNeedsLexing(false);
 }
 
-void ScintillaEditView::styleChange() {
+void ScintillaEditView::styleChange()
+{
 	defineDocType(_currentBuffer->getLangType());
 	restyleBuffer();
 }
@@ -1877,13 +1946,14 @@ void ScintillaEditView::activateBuffer(BufferID buffer)
 		restyleBuffer();
 	}
 
+	// Everything should be updated, but the language
+	bufferUpdated(_currentBuffer, (BufferChangeMask & ~BufferChangeLanguage));
+
 	// restore the collapsed info
 	const std::vector<size_t> & lineStateVectorNew = newBuf->getHeaderLineState(this);
 	syncFoldStateWith(lineStateVectorNew);
 
-	restoreCurrentPos();
-
-	bufferUpdated(_currentBuffer, (BufferChangeMask & ~BufferChangeLanguage));	//everything should be updated, but the language (which undoes some operations done here like folding)
+	restoreCurrentPosPreStep();
 
 	//setup line number margin
 	int numLines = static_cast<int32_t>(execute(SCI_GETLINECOUNT));
@@ -2526,6 +2596,7 @@ void ScintillaEditView::performGlobalStyles()
 		edgeColor = style._fgColor;
 	}
 	execute(SCI_SETEDGECOLOUR, edgeColor);
+	::SendMessage(_hParent, NPPM_INTERNAL_EDGEMULTISETSIZE, 0, 0);
 
 	COLORREF foldMarginColor = grey;
 	COLORREF foldMarginHiColor = white;
@@ -2558,7 +2629,16 @@ void ScintillaEditView::performGlobalStyles()
 	execute(SCI_SETWHITESPACEFORE, true, wsSymbolFgColor);
 }
 
-void ScintillaEditView::setLineIndent(int line, int indent) const {
+void ScintillaEditView::showIndentGuideLine(bool willBeShowed)
+{
+	auto typeDoc = _currentBuffer->getLangType();
+	const bool pythonLike = (typeDoc == L_PYTHON || typeDoc == L_COFFEESCRIPT || typeDoc == L_HASKELL);
+	const int docIndentMode = pythonLike ? SC_IV_LOOKFORWARD : SC_IV_LOOKBOTH;
+	execute(SCI_SETINDENTATIONGUIDES, willBeShowed ? docIndentMode : SC_IV_NONE);
+}
+
+void ScintillaEditView::setLineIndent(int line, int indent) const
+{
 	if (indent < 0)
 		return;
 	Sci_CharacterRange crange = getSelection();
@@ -2566,23 +2646,31 @@ void ScintillaEditView::setLineIndent(int line, int indent) const {
 	execute(SCI_SETLINEINDENTATION, line, indent);
 	int32_t posAfter = static_cast<int32_t>(execute(SCI_GETLINEINDENTPOSITION, line));
 	int posDifference = posAfter - posBefore;
-	if (posAfter > posBefore) {
+	if (posAfter > posBefore)
+	{
 		// Move selection on
-		if (crange.cpMin >= posBefore) {
+		if (crange.cpMin >= posBefore)
+		{
 			crange.cpMin += posDifference;
 		}
-		if (crange.cpMax >= posBefore) {
+		if (crange.cpMax >= posBefore)
+		{
 			crange.cpMax += posDifference;
 		}
-	} else if (posAfter < posBefore) {
+	}
+	else if (posAfter < posBefore)
+	{
 		// Move selection back
-		if (crange.cpMin >= posAfter) {
+		if (crange.cpMin >= posAfter)
+		{
 			if (crange.cpMin >= posBefore)
 				crange.cpMin += posDifference;
 			else
 				crange.cpMin = posAfter;
 		}
-		if (crange.cpMax >= posAfter) {
+
+		if (crange.cpMax >= posAfter)
+		{
 			if (crange.cpMax >= posBefore)
 				crange.cpMax += posDifference;
 			else
@@ -2899,7 +2987,8 @@ pair<int, int> ScintillaEditView::getWordRange()
 bool ScintillaEditView::expandWordSelection()
 {
     pair<int, int> wordRange = 	getWordRange();
-    if (wordRange.first != wordRange.second) {
+    if (wordRange.first != wordRange.second)
+	{
         execute(SCI_SETSELECTIONSTART, wordRange.first);
         execute(SCI_SETSELECTIONEND, wordRange.second);
 		return true;
@@ -3241,7 +3330,9 @@ void ScintillaEditView::hideLines()
 			execute(SCI_MARKERDELETE, i, MARK_HIDELINESEND);
 			if (scope > 0) scope--;
 		}
-		if (openPresent) {
+
+		if (openPresent)
+		{
 			execute(SCI_MARKERDELETE, i, MARK_HIDELINESBEGIN);
 			execute(SCI_MARKERDELETE, i, MARK_HIDELINESUNDERLINE);
 			++scope;
@@ -3289,11 +3380,13 @@ bool ScintillaEditView::markerMarginClick(int lineNumber)
 	return true;
 }
 
-void ScintillaEditView::notifyMarkers(Buffer * buf, bool isHide, int location, bool del) {
+void ScintillaEditView::notifyMarkers(Buffer * buf, bool isHide, int location, bool del)
+{
 	if (buf != _currentBuffer)	//if not visible buffer dont do a thing
 		return;
 	runMarkers(isHide, location, false, del);
 }
+
 //Run through full document. When switching in or opening folding
 //hide is false only when user click on margin
 void ScintillaEditView::runMarkers(bool doHide, size_t searchStart, bool endOfDoc, bool doDelete)

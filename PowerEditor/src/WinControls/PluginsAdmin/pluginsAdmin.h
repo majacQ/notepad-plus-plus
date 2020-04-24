@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2017 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -207,6 +207,7 @@ public :
 
 	void changeTabName(LIST_TYPE index, const TCHAR *name2change);
 	void changeColumnName(COLUMN_TYPE index, const TCHAR *name2change);
+	generic_string getPluginListVerStr() const;
 
 protected:
 	virtual INT_PTR CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);

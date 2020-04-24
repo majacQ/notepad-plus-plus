@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -369,6 +369,7 @@ static const WinMenuKeyDefinition winKeyDefs[] =
 
 	{ VK_NULL,    IDM_LANG_USER_DLG,                            false, false, false, nullptr },
 	{ VK_NULL,    IDM_LANG_USER,                                false, false, false, nullptr },
+	{ VK_NULL,    IDM_LANG_OPENUDLDIR,                          false, false, false, nullptr },
 
 	{ VK_NULL,    IDM_SETTING_PREFERENCE,                       false, false, false, nullptr },
 	{ VK_NULL,    IDM_LANGSTYLE_CONFIG_DLG,                     false, false, false, nullptr },
@@ -389,7 +390,7 @@ static const WinMenuKeyDefinition winKeyDefs[] =
 	{ VK_NULL,    IDM_CMDLINEARGUMENTS,                         false, false, false, nullptr },
 	{ VK_NULL,    IDM_HOMESWEETHOME,                            false, false, false, nullptr },
 	{ VK_NULL,    IDM_PROJECTPAGE,                              false, false, false, nullptr },
-//  { VK_NULL,    IDM_ONLINEHELP,                               false, false, false, nullptr },
+//  { VK_NULL,    IDM_ONLINEDOCUMENT,                               false, false, false, nullptr },
 	{ VK_NULL,    IDM_FORUM,                                    false, false, false, nullptr },
 	{ VK_NULL,    IDM_ONLINESUPPORT,                            false, false, false, nullptr },
 //	{ VK_NULL,    IDM_PLUGINSHOME,                              false, false, false, nullptr },
@@ -1229,12 +1230,12 @@ bool NppParameters::load()
 	//-----------------------------------//
 	// userDefineLang.xml : for per user //
 	//-----------------------------------//
-	generic_string userDefineLangsFolderPath = _userDefineLangPath = _userPath;
+	_userDefineLangsFolderPath = _userDefineLangPath = _userPath;
 	PathAppend(_userDefineLangPath, TEXT("userDefineLang.xml"));
-	PathAppend(userDefineLangsFolderPath, TEXT("userDefineLangs"));
+	PathAppend(_userDefineLangsFolderPath, TEXT("userDefineLangs"));
 
 	std::vector<generic_string> udlFiles;
-	getFilesInFolder(udlFiles, TEXT("*.xml"), userDefineLangsFolderPath);
+	getFilesInFolder(udlFiles, TEXT("*.xml"), _userDefineLangsFolderPath);
 
 	_pXmlUserLangDoc = new TiXmlDocument(_userDefineLangPath);
 	loadOkay = _pXmlUserLangDoc->LoadFile();
@@ -1439,6 +1440,7 @@ void NppParameters::destroyInstance()
 	delete _pXmlContextMenuDocA;
 	delete _pXmlSessionDoc;
 	delete _pXmlBlacklistDoc;
+	delete 	getInstancePointer();
 }
 
 
@@ -1788,8 +1790,8 @@ void NppParameters::initMenuKeys()
 	}
 }
 
-void NppParameters::initScintillaKeys() {
-
+void NppParameters::initScintillaKeys()
+{
 	int nbCommands = sizeof(scintKeyDefs)/sizeof(ScintillaKeyDefinition);
 
 	//Warning! Matching function have to be consecutive
@@ -2074,7 +2076,8 @@ bool NppParameters::getSessionFromXmlTree(TiXmlDocument *pSessionDoc, Session *p
 					(childNode->ToElement())->Attribute(TEXT("endPos"), &position._endPos);
 					(childNode->ToElement())->Attribute(TEXT("selMode"), &position._selMode);
 					(childNode->ToElement())->Attribute(TEXT("scrollWidth"), &position._scrollWidth);
-
+					(childNode->ToElement())->Attribute(TEXT("offset"), &position._offset);
+					(childNode->ToElement())->Attribute(TEXT("wrapCount"), &position._wrapCount);
 					MapPosition mapPosition;
 					int32_t mapPosVal;
 					const TCHAR *mapPosStr = (childNode->ToElement())->Attribute(TEXT("mapFirstVisibleDisplayLine"), &mapPosVal);
@@ -3119,6 +3122,8 @@ void NppParameters::writeSession(const Session & session, const TCHAR *fileName)
 				(fileNameNode->ToElement())->SetAttribute(TEXT("startPos"), viewSessionFiles[i]._startPos);
 				(fileNameNode->ToElement())->SetAttribute(TEXT("endPos"), viewSessionFiles[i]._endPos);
 				(fileNameNode->ToElement())->SetAttribute(TEXT("selMode"), viewSessionFiles[i]._selMode);
+				(fileNameNode->ToElement())->SetAttribute(TEXT("offset"), viewSessionFiles[i]._offset);
+				(fileNameNode->ToElement())->SetAttribute(TEXT("wrapCount"), viewSessionFiles[i]._wrapCount);
 				(fileNameNode->ToElement())->SetAttribute(TEXT("lang"), viewSessionFiles[i]._langName.c_str());
 				(fileNameNode->ToElement())->SetAttribute(TEXT("encoding"), viewSessionFiles[i]._encoding);
 				(fileNameNode->ToElement())->SetAttribute(TEXT("userReadOnly"), (viewSessionFiles[i]._isUserReadOnly && !viewSessionFiles[i]._isMonitoring) ? TEXT("yes") : TEXT("no"));
@@ -3789,7 +3794,7 @@ generic_string NppParameters::getLocPathFromStr(const generic_string & localizat
 	if (localizationCode == TEXT("ca"))
 		return TEXT("catalan.xml");
 	if (localizationCode == TEXT("zh-tw") || localizationCode == TEXT("zh-hk") || localizationCode == TEXT("zh-sg"))
-		return TEXT("chinese.xml");
+		return TEXT("taiwaneseMandarin.xml");
 	if (localizationCode == TEXT("zh") || localizationCode == TEXT("zh-cn"))
 		return TEXT("chineseSimplified.xml");
 	if (localizationCode == TEXT("co") || localizationCode == TEXT("co-fr"))
@@ -3918,6 +3923,8 @@ generic_string NppParameters::getLocPathFromStr(const generic_string & localizat
 		return TEXT("uzbek.xml");
 	if (localizationCode == TEXT("uz-cyrl-uz"))
 		return TEXT("uzbekCyrillic.xml");
+	if (localizationCode == TEXT("vec"))
+		return TEXT("venetian.xml");
 	if (localizationCode == TEXT("vi") || localizationCode == TEXT("vi-vn"))
 		return TEXT("vietnamese.xml");
 	if (localizationCode == TEXT("cy-gb"))
@@ -4504,6 +4511,39 @@ void NppParameters::feedGUIParameters(TiXmlNode *node)
 			if (val)
 				_nppGUI._isMaximized = (lstrcmp(val, TEXT("yes")) == 0);
 		}
+
+		else if (!lstrcmp(nm, TEXT("FindWindowPosition")))
+		{
+			RECT oldRect = _nppGUI._findWindowPos;
+			bool incomplete = true;
+			int i;
+
+			if (element->Attribute(TEXT("left"), &i))
+			{
+				_nppGUI._findWindowPos.left = i;
+
+				if (element->Attribute(TEXT("top"), &i))
+				{
+					_nppGUI._findWindowPos.top = i;
+
+					if (element->Attribute(TEXT("right"), &i))
+					{
+						_nppGUI._findWindowPos.right = i;
+
+						if (element->Attribute(TEXT("bottom"), &i))
+						{
+							_nppGUI._findWindowPos.bottom = i;
+							incomplete = false;
+						}
+					}
+				}
+			}
+			if (incomplete)
+			{
+				_nppGUI._findWindowPos = oldRect;
+			}
+		}
+
 		else if (!lstrcmp(nm, TEXT("NewDocDefaultSettings")))
 		{
 			int i;
@@ -5075,6 +5115,14 @@ void NppParameters::feedGUIParameters(TiXmlNode *node)
 			if (optNameBackSlashEscape && !lstrcmp(optNameBackSlashEscape, TEXT("no")))
 				_nppGUI._backSlashIsEscapeCharacterForSql = false;
 
+			const TCHAR * optNameMonoFont = element->Attribute(TEXT("monospacedFontFindDlg"));
+			if (optNameMonoFont)
+				_nppGUI._monospacedFontFindDlg = (lstrcmp(optNameMonoFont, TEXT("yes")) == 0);
+
+			const TCHAR * optStopFillingFindField = element->Attribute(TEXT("stopFillingFindField"));
+			if (optStopFillingFindField)
+				_nppGUI._stopFillingFindField = (lstrcmp(optStopFillingFindField, TEXT("yes")) == 0);
+
 			const TCHAR * optNameNewStyleSaveDlg = element->Attribute(TEXT("newStyleSaveDlg"));
 			if (optNameNewStyleSaveDlg)
 				_nppGUI._useNewStyleSaveDlg = (lstrcmp(optNameNewStyleSaveDlg, TEXT("yes")) == 0);
@@ -5090,7 +5138,16 @@ void NppParameters::feedGUIParameters(TiXmlNode *node)
 			const TCHAR * optDocPeekOnMap = element->Attribute(TEXT("docPeekOnMap"));
 			if (optDocPeekOnMap)
 				_nppGUI._isDocPeekOnMap = (lstrcmp(optDocPeekOnMap, TEXT("yes")) == 0);
-
+		}
+		else if (!lstrcmp(nm, TEXT("commandLineInterpreter")))
+		{
+			TiXmlNode *node = childNode->FirstChild();
+			if (node)
+			{
+				const TCHAR *cli = node->Value();
+				if (cli && cli[0])
+					_nppGUI._commandLineInterpreter.assign(cli);
+			}
 		}
 	}
 }
@@ -5209,15 +5266,13 @@ void NppParameters::feedScintillaParam(TiXmlNode *node)
 	}
 
 	// Do Edge
-	nm = element->Attribute(TEXT("edge"));
+	nm = element->Attribute(TEXT("isEdgeBgMode"));
 	if (nm)
 	{
-		if (!lstrcmp(nm, TEXT("background")))
-			_svp._edgeMode = EDGE_BACKGROUND;
-		else if (!lstrcmp(nm, TEXT("line")))
-			_svp._edgeMode = EDGE_LINE;
-		else
-			_svp._edgeMode = EDGE_NONE;
+		if (!lstrcmp(nm, TEXT("yes")))
+			_svp._isEdgeBgMode = true;
+		else if (!lstrcmp(nm, TEXT("no")))
+			_svp._isEdgeBgMode = false;
 	}
 
 	// Do Scintilla border edge
@@ -5230,13 +5285,13 @@ void NppParameters::feedScintillaParam(TiXmlNode *node)
 			_svp._showBorderEdge = false;
 	}
 
-	int val;
-	nm = element->Attribute(TEXT("edgeNbColumn"), &val);
+	nm = element->Attribute(TEXT("edgeMultiColumnPos"));
 	if (nm)
 	{
-		_svp._edgeNbColumn = val;
+		str2numberVector(nm, _svp._edgeMultiColumnPos);
 	}
 
+	int val;
 	nm = element->Attribute(TEXT("zoom"), &val);
 	if (nm)
 	{
@@ -5416,15 +5471,15 @@ bool NppParameters::writeScintillaParams()
 	(scintNode->ToElement())->SetAttribute(TEXT("Wrap"), _svp._doWrap?TEXT("yes"):TEXT("no"));
 	(scintNode->ToElement())->SetAttribute(TEXT("borderEdge"), _svp._showBorderEdge ? TEXT("yes") : TEXT("no"));
 
-	const TCHAR *edgeStr;
-	if (_svp._edgeMode == EDGE_NONE)
-		edgeStr = TEXT("no");
-	else if (_svp._edgeMode == EDGE_LINE)
-		edgeStr = TEXT("line");
-	else
-		edgeStr = TEXT("background");
-	(scintNode->ToElement())->SetAttribute(TEXT("edge"), edgeStr);
-	(scintNode->ToElement())->SetAttribute(TEXT("edgeNbColumn"), _svp._edgeNbColumn);
+	generic_string edgeColumnPosStr;
+	for (auto i : _svp._edgeMultiColumnPos)
+	{
+		std::string s = std::to_string(i);
+		edgeColumnPosStr += generic_string(s.begin(), s.end());
+		edgeColumnPosStr += TEXT(" ");
+	}
+	(scintNode->ToElement())->SetAttribute(TEXT("isEdgeBgMode"), _svp._isEdgeBgMode ? TEXT("yes") : TEXT("no"));
+	(scintNode->ToElement())->SetAttribute(TEXT("edgeMultiColumnPos"), edgeColumnPosStr);
 	(scintNode->ToElement())->SetAttribute(TEXT("zoom"), _svp._zoom);
 	(scintNode->ToElement())->SetAttribute(TEXT("zoom2"), _svp._zoom2);
 	(scintNode->ToElement())->SetAttribute(TEXT("whiteSpaceShow"), _svp._whiteSpaceShow?TEXT("show"):TEXT("hide"));
@@ -5541,6 +5596,16 @@ void NppParameters::createXmlTreeFromGUIParams()
 		GUIConfigElement->SetAttribute(TEXT("width"), _nppGUI._appPos.right);
 		GUIConfigElement->SetAttribute(TEXT("height"), _nppGUI._appPos.bottom);
 		GUIConfigElement->SetAttribute(TEXT("isMaximized"), _nppGUI._isMaximized ? TEXT("yes") : TEXT("no"));
+	}
+
+	// <GUIConfig name="FindWindowPosition" left="134" top="320" right="723" bottom="684" />
+	{
+		TiXmlElement* GUIConfigElement = (newGUIRoot->InsertEndChild(TiXmlElement(TEXT("GUIConfig"))))->ToElement();
+		GUIConfigElement->SetAttribute(TEXT("name"), TEXT("FindWindowPosition"));
+		GUIConfigElement->SetAttribute(TEXT("left"), _nppGUI._findWindowPos.left);
+		GUIConfigElement->SetAttribute(TEXT("top"), _nppGUI._findWindowPos.top);
+		GUIConfigElement->SetAttribute(TEXT("right"), _nppGUI._findWindowPos.right);
+		GUIConfigElement->SetAttribute(TEXT("bottom"), _nppGUI._findWindowPos.bottom);
 	}
 
 	// <GUIConfig name="noUpdate" intervalDays="15" nextUpdateDate="20161022">no</GUIConfig>
@@ -5831,6 +5896,8 @@ void NppParameters::createXmlTreeFromGUIParams()
 
 		GUIConfigElement->SetAttribute(TEXT("fileSwitcherWithoutExtColumn"), _nppGUI._fileSwitcherWithoutExtColumn ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("backSlashIsEscapeCharacterForSql"), _nppGUI._backSlashIsEscapeCharacterForSql ? TEXT("yes") : TEXT("no"));
+		GUIConfigElement->SetAttribute(TEXT("monospacedFontFindDlg"), _nppGUI._monospacedFontFindDlg ? TEXT("yes") : TEXT("no"));
+		GUIConfigElement->SetAttribute(TEXT("stopFillingFindField"), _nppGUI._stopFillingFindField ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("newStyleSaveDlg"), _nppGUI._useNewStyleSaveDlg ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("isFolderDroppedOpenFiles"), _nppGUI._isFolderDroppedOpenFiles ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("docPeekOnTab"), _nppGUI._isDocPeekOnTab ? TEXT("yes") : TEXT("no"));
@@ -5852,6 +5919,14 @@ void NppParameters::createXmlTreeFromGUIParams()
 		GUIConfigElement->SetAttribute(TEXT("wholeWordOnly"), _nppGUI._smartHiliteWordOnly ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("useFindSettings"), _nppGUI._smartHiliteUseFindSettings ? TEXT("yes") : TEXT("no"));
 		GUIConfigElement->SetAttribute(TEXT("onAnotherView"), _nppGUI._smartHiliteOnAnotherView ? TEXT("yes") : TEXT("no"));
+	}
+
+	// <GUIConfig name="commandLineInterpreter">powershell</GUIConfig>
+	if (_nppGUI._commandLineInterpreter.compare(TEXT("cmd")))
+	{
+		TiXmlElement *GUIConfigElement = (newGUIRoot->InsertEndChild(TiXmlElement(TEXT("GUIConfig"))))->ToElement();
+		GUIConfigElement->SetAttribute(TEXT("name"), TEXT("commandLineInterpreter"));
+		GUIConfigElement->InsertEndChild(TiXmlText(_nppGUI._commandLineInterpreter.c_str()));
 	}
 
 	// <GUIConfig name="ScintillaPrimaryView" lineNumberMargin="show" bookMarkMargin="show" indentGuideLine="show" folderMarkStyle="box" lineWrapMethod="aligned" currentLineHilitingShow="show" scrollBeyondLastLine="no" disableAdvancedScrolling="no" wrapSymbolShow="hide" Wrap="no" borderEdge="yes" edge="no" edgeNbColumn="80" zoom="0" zoom2="0" whiteSpaceShow="hide" eolShow="hide" borderWidth="2" smoothFont="no" />
@@ -6105,7 +6180,8 @@ TiXmlElement * NppParameters::insertGUIConfigBoolNode(TiXmlNode *r2w, const TCHA
 	return GUIConfigElement;
 }
 
-int RGB2int(COLORREF color) {
+int RGB2int(COLORREF color)
+{
 	return (((((DWORD)color) & 0x0000FF) << 16) | ((((DWORD)color) & 0x00FF00)) | ((((DWORD)color) & 0xFF0000) >> 16));
 }
 
@@ -6872,10 +6948,12 @@ Date::Date(int nbDaysFromNow)
 	rawtime += (nbDaysFromNow * oneDay);
 
 	timeinfo = localtime(&rawtime);
-
-	_year = timeinfo->tm_year + 1900;
-	_month = timeinfo->tm_mon + 1;
-	_day = timeinfo->tm_mday;
+	if (timeinfo)
+	{
+		_year = timeinfo->tm_year + 1900;
+		_month = timeinfo->tm_mon + 1;
+		_day = timeinfo->tm_mday;
+	}
 }
 
 void Date::now()
@@ -6885,10 +6963,12 @@ void Date::now()
 
 	time(&rawtime);
 	timeinfo = localtime(&rawtime);
-
-	_year = timeinfo->tm_year + 1900;
-	_month = timeinfo->tm_mon + 1;
-	_day = timeinfo->tm_mday;
+	if (timeinfo)
+	{
+		_year = timeinfo->tm_year + 1900;
+		_month = timeinfo->tm_mon + 1;
+		_day = timeinfo->tm_mday;
+	}
 }
 
 

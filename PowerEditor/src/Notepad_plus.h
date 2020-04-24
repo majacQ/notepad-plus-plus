@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -241,18 +241,25 @@ public:
 	std::vector<generic_string> addNppComponents(const TCHAR *destDir, const TCHAR *extFilterName, const TCHAR *extFilter);
 	std::vector<generic_string> addNppPlugins(const TCHAR *extFilterName, const TCHAR *extFilter);
     int getHtmlXmlEncoding(const TCHAR *fileName) const;
+
 	HACCEL getAccTable() const{
 		return _accelerator.getAccTable();
-	}
+	};
+
 	bool emergency(const generic_string& emergencySavedDir);
+
 	Buffer* getCurrentBuffer()	{
 		return _pEditView->getCurrentBuffer();
-	}
+	};
+
 	void launchDocumentBackupTask();
 	int getQuoteIndexFrom(const wchar_t* quoter) const;
 	void showQuoteFromIndex(int index) const;
 	void showQuote(const QuoteParams* quote) const;
 
+	generic_string getPluginListVerStr() const {
+		return _pluginsAdminDlg.getPluginListVerStr();
+	};
 
 private:
 	Notepad_plus_Window *_pPublicInterface = nullptr;
@@ -374,6 +381,12 @@ private:
 
 	bool _isFileOpening = false;
 	bool _isAdministrator = false;
+
+	bool _isEndingSessionButNotReady = false; // If Windows 10 update needs to restart 
+                                              // and Notepad++ has one (some) dirty document(s)
+                                              // and "Enable session snapshot and periodic backup" is not enabled
+                                              // then WM_ENDSESSION is send with wParam == FALSE
+                                              // in this case this boolean is set true, so Notepad++ will quit and its current session will be saved 
 
 	ScintillaCtrls _scintillaCtrls4Plugins;
 

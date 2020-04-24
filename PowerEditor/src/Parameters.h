@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -136,6 +136,8 @@ struct Position
 	int _xOffset = 0;
 	int _selMode = 0;
 	int _scrollWidth = 1;
+	int _offset = 0;
+	int _wrapCount = 0;
 };
 
 
@@ -770,6 +772,11 @@ struct NppGUI final
 		_appPos.right = 1100;
 		_appPos.bottom = 700;
 
+		_findWindowPos.left = 0;
+		_findWindowPos.top = 0;
+		_findWindowPos.right = 0;
+		_findWindowPos.bottom = 0;
+
 		_defaultDir[0] = 0;
 		_defaultDirExp[0] = 0;
 	}
@@ -801,6 +808,8 @@ struct NppGUI final
 
 	RECT _appPos;
 
+	RECT _findWindowPos;
+
 	bool _isMaximized = false;
 	bool _isMinimizedToTray = false;
 	bool _rememberLastSession = true; // remember next session boolean will be written in the settings
@@ -824,7 +833,8 @@ struct NppGUI final
 	char _rightmostDelimiter = ')';
 	bool _delimiterSelectionOnEntireDocument = false;
 	bool _backSlashIsEscapeCharacterForSql = true;
-
+	bool _stopFillingFindField = false;
+	bool _monospacedFontFindDlg = false;
 	bool _isWordCharDefault = true;
 	std::string _customWordChars;
 
@@ -856,6 +866,8 @@ struct NppGUI final
 
 	generic_string _definedSessionExt;
 	generic_string _definedWorkspaceExt;
+
+	generic_string _commandLineInterpreter = TEXT("cmd");
 
 	struct AutoUpdateOptions
 	{
@@ -908,8 +920,9 @@ struct ScintillaViewParams
 	bool _currentLineHilitingShow = true;
 	bool _wrapSymbolShow = false;
 	bool _doWrap = false;
-	int _edgeMode = EDGE_NONE;
-	int _edgeNbColumn = 80;
+	bool _isEdgeBgMode = false;
+
+	std::vector<size_t> _edgeMultiColumnPos;
 	int _zoom = 0;
 	int _zoom2 = 0;
 	bool _whiteSpaceShow = false;
@@ -1291,11 +1304,17 @@ const int RECENTFILES_SHOWONLYFILENAME = 0;
 
 class NppParameters final
 {
-public:
-	static NppParameters& getInstance() {
-		static NppParameters instance;
+private:
+	static NppParameters* getInstancePointer() {
+		static NppParameters* instance = new NppParameters;
 		return instance;
 	};
+
+public:
+	static NppParameters& getInstance() {
+		return *getInstancePointer();
+	};
+
 	static LangType getLangIDFromStr(const TCHAR *langName);
 	static generic_string getLocPathFromStr(const generic_string & localizationCode);
 
@@ -1609,6 +1628,14 @@ public:
 		return _userPath;
 	}
 
+	generic_string getUserDefineLangFolderPath() const {
+		return _userDefineLangsFolderPath;
+	}
+
+	generic_string getUserDefineLangPath() const {
+		return _userDefineLangPath;
+	}
+
 	bool writeSettingsFilesOnCloudForThe1stTime(const generic_string & cloudSettingsPath);
 	void setCloudChoice(const TCHAR *pathChoice);
 	void removeCloudChoice();
@@ -1658,6 +1685,7 @@ private:
 	NppParameters(NppParameters&&) = delete;
 	NppParameters& operator=(NppParameters&&) = delete;
 
+
 	TiXmlDocument *_pXmlDoc = nullptr;
 	TiXmlDocument *_pXmlUserDoc = nullptr;
 	TiXmlDocument *_pXmlUserStylerDoc = nullptr;
@@ -1691,6 +1719,7 @@ private:
 
 	UserLangContainer *_userLangArray[NB_MAX_USER_LANG];
 	unsigned char _nbUserLang = 0; // won't be exceeded to 255;
+	generic_string _userDefineLangsFolderPath;
 	generic_string _userDefineLangPath;
 	ExternalLangContainer *_externalLangArray[NB_MAX_EXTERNAL_LANG];
 	int _nbExternalLang = 0;
@@ -1716,6 +1745,9 @@ private:
 
 public:
 	void setShortcutDirty() { _isAnyShortcutModified = true; };
+	void setAdminMode(bool isAdmin) { _isAdminMode = isAdmin; }
+	bool isAdmin() const { return _isAdminMode; }
+
 private:
 	bool _isAnyShortcutModified = false;
 	std::vector<CommandShortcut> _shortcuts;			//main menu shortuts. Static size
@@ -1775,6 +1807,7 @@ private:
 	generic_string _wingupParams;
 	generic_string _wingupDir;
 	bool _isElevationRequired = false;
+	bool _isAdminMode = false;
 
 public:
 	generic_string getWingupFullPath() const { return _wingupFullPath; };

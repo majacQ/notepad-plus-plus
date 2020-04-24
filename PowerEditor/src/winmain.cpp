@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@
 #include "Processus.h"
 #include "Win32Exception.h"	//Win32 exception
 #include "MiniDumper.h"			//Write dump files
-#include "verifySignedFile.h"
+#include "verifySignedfile.h"
 
 typedef std::vector<generic_string> ParamVector;
 
@@ -146,7 +146,8 @@ bool getParamVal(TCHAR c, ParamVector & params, generic_string & value)
 	for (size_t i = 0; i < nbItems; ++i)
 	{
 		const TCHAR * token = params.at(i).c_str();
-		if (token[0] == '-' && lstrlen(token) >= 2 && token[1] == c) {	//dash, and enough chars
+		if (token[0] == '-' && lstrlen(token) >= 2 && token[1] == c) //dash, and enough chars
+		{
 			value = (token+2);
 			params.erase(params.begin() + i);
 			return true;
@@ -191,7 +192,8 @@ generic_string getLocalizationPathFromParam(ParamVector & params)
 	return NppParameters::getLocPathFromStr(locStr.c_str());
 }
 
-int getNumberFromParam(char paramName, ParamVector & params, bool & isParamePresent) {
+int getNumberFromParam(char paramName, ParamVector & params, bool & isParamePresent)
+{
 	generic_string numStr;
 	if (!getParamVal(paramName, params, numStr))
 	{
@@ -299,8 +301,8 @@ PWSTR advanceCmdLine(PWSTR pCmdLine, const generic_string& string)
 		}
 	
 		// Match the substring only if it matched an entire substring		
-		if ( (ignoredString == pCmdLine || iswspace(*(ignoredString-1)) ) && // Check start
-			 (iswspace(*(ignoredString+len)) || *(ignoredString+len) == '\0') )
+		if ((ignoredString == pCmdLine || iswspace(*(ignoredString - 1))) && // Check start
+			(iswspace(*(ignoredString + len)) || *(ignoredString + len) == '\0' || *(ignoredString + len) == '"'))
 		{
 			ignoredString += len;
 
@@ -409,7 +411,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int)
 		::MessageBox(NULL, COMMAND_ARG_HELP, TEXT("Notepad++ Command Argument Help"), MB_OK);
 
 	NppParameters& nppParameters = NppParameters::getInstance();
+
+	if (cmdLineParams._localizationPath != TEXT(""))
+	{
+		// setStartWithLocFileName() should be called before parameters are loaded
+		nppParameters.setStartWithLocFileName(cmdLineParams._localizationPath);
+	}
+
+	nppParameters.load();
 	NppGUI & nppGui = const_cast<NppGUI &>(nppParameters.getNppGUI());
+
 	bool doUpdateNpp = nppGui._autoUpdateOpt._doAutoUpdate;
 	bool doUpdatePluginList = nppGui._autoUpdateOpt._doAutoUpdate;
 
@@ -419,12 +430,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int)
 		doUpdateNpp = doUpdatePluginList = false;
 		cmdLineParams._isNoSession = true;
 	}
-
-	if (cmdLineParams._localizationPath != TEXT(""))
-	{
-		nppParameters.setStartWithLocFileName(cmdLineParams._localizationPath);
-	}
-	nppParameters.load();
 
 	nppParameters.setFunctionListExportBoolean(doFunctionListExport);
 	nppParameters.setPrintAndExitBoolean(doPrintAndQuit);
@@ -570,12 +575,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int)
 		if (doUpdatePluginList)
 		{
 			// Update Plugin List
-			updaterParams += TEXT(" -upPL");
+			generic_string upPlParams = TEXT("-v"); 
+			upPlParams += notepad_plus_plus.getPluginListVerStr();
+
+			if (nppParameters.isx64())
+			{
+				upPlParams += TEXT(" -px64");
+			}
+
+			upPlParams += TEXT(" -upZip");
 
 			// overrided "InfoUrl" in gup.xml
-			updaterParams += TEXT(" https://notepad-plus-plus.org/update/pluginListDownloadUrl.php");
+			upPlParams += TEXT(" https://notepad-plus-plus.org/update/pluginListDownloadUrl.php");
 
-			Process updater(updaterFullPath.c_str(), updaterParams.c_str(), updaterDir.c_str());
+			// indicate the pluginList installation location
+			upPlParams += nppParameters.getPluginConfDir();
+
+			Process updater(updaterFullPath.c_str(), upPlParams.c_str(), updaterDir.c_str());
 			updater.run();
 
 			// TODO: Update next update date

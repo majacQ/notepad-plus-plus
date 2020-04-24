@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <NotepadPlus>
-    <Native-Langue name="繁體中文/正體中文" filename="chinese.xml" version="7.7.2">
+    <Native-Langue name="台灣繁體" filename="taiwaneseMandarin.xml" version="7.8.6">
         <Menu>
             <Main>
                 <!-- Main Menu Entries -->
@@ -63,6 +63,7 @@
                     <Item subMenuId="encoding-turkish" name="土耳其文"/>
                     <Item subMenuId="encoding-westernEuropean" name="西歐語系"/>
                     <Item subMenuId="encoding-vietnamese" name="越南文"/>
+                    <Item subMenuId="language-userDefinedLanguage" name="自訂程式語言"/>
                     <Item subMenuId="settings-import"  name="匯入"/>
                     <Item subMenuId="tools-md5"  name="MD5"/>
                     <Item subMenuId="tools-sha256"  name="SHA-256"/>
@@ -283,6 +284,7 @@
 
                     <Item id="46001" name="設定程式語言格式..."/>
                     <Item id="46250" name="定義程式語言..."/>
+                    <Item id="46300" name="開啟自訂程式語言資料夾..."/>
                     <Item id="46180" name="偏好設定"/>
                     <Item id="47000" name="關於 Notepad++..."/>
                     <Item id="47001" name="Notepad++ 官方網站"/>
@@ -311,7 +313,10 @@
                     <Item id="49000" name="執行(&amp;R)..."/>
                     <Item id="50000" name="函數自動完成"/>
                     <Item id="50001" name="字詞自動完成"/>
-                    <Item id="50002" name="功能參數提示"/>
+                    <Item id="50002" name="功能參數提示"/>                    
+					<Item id="50003" name="切換到上一文件"/>
+                    <Item id="50004" name="切換到下一文件"/>
+                    <Item id="50005" name="啟動/停止巨集錄製"/>
                     <Item id="50006" name="自動完成文件路徑"/>
                     <Item id="44042" name="隱藏此行"/>
                     <Item id="42040" name="開啟所有最近使用的檔案"/>
@@ -331,9 +336,9 @@
                     <Item CMID="4"  name="列印"/>
                     <Item CMID="5"  name="移動此檔案至另一個視窗"/>
                     <Item CMID="6"  name="複製此檔案至另一個視窗"/>
-                    <Item CMID="7"  name="將資料夾路徑複製到剪貼簿"/>
+                    <Item CMID="7"  name="將資料夾路徑及檔案名稱複製到剪貼簿"/>
                     <Item CMID="8"  name="將檔案名稱複製到剪貼簿"/>
-                    <Item CMID="9"  name="將資料夾路徑及檔案名稱複製到剪貼簿"/>
+                    <Item CMID="9"  name="將資料夾路徑複製到剪貼簿"/>
                     <Item CMID="10" name="重新命名此檔案"/>
                     <Item CMID="11" name="刪除現有檔案"/>
                     <Item CMID="12" name="將此檔案設為唯讀"/>
@@ -737,12 +742,12 @@
                     <Item id="6206" name="顯示行號"/>
                     <Item id="6207" name="顯示標記"/>
                     <Item id="6208" name="顯示邊界線"/>
-                    <Item id="6209" name="字元數："/>
                     <Item id="6234" name="關閉進階捲動功能
 （若有觸控板問題）"/>
                     <Item id="6211" name="邊緣線設定"/>
-                    <Item id="6212" name="垂直線模式"/>
                     <Item id="6213" name="背景色模式"/>
+                    <Item id="6237" name="如欲添加列標記可以在下面以數字指示其列位置。
+使用空格分隔不同數字來定義多個列標記。"/>
                     <Item id="6214" name="於游標行加上背景顏色"/>
                     <Item id="6215" name="啟用平滑字體"/>
                     <Item id="6231" name="邊框寬度"/>
@@ -774,6 +779,7 @@
                 </DefaultDir>
 
                 <FileAssoc title="副檔名連結設定">
+                    <Item id="4008" name="請關閉 Notepad++，並在系統管理員模式下重新啟動 Notepad++ 以使用此功能。"/>
                     <Item id="4009" name="支援的副檔名"/>
                     <Item id="4010" name="已連結的副檔名"/>
                 </FileAssoc>
@@ -786,6 +792,7 @@
                     <Item id="6302" name="使用空格"/>
                     <Item id="6303" name="縮排大小："/>
                     <Item id="6510" name="使用預設值"/>
+                    <Item id="6335" name="在 SQL 中視「\」為逸出字元"/>
                 </Language>
 
                 <Highlighting title="醒目提示">
@@ -857,6 +864,7 @@
                 </Backup>
 
                 <AutoCompletion title="字詞自動完成功能">
+                    <Item id="6115" name="自動縮排"/>
                     <Item id="6807" name="自動完成功能"/>
                     <Item id="6808" name="啟動自動完成功能"/>
                     <Item id="6809" name="函式"/>
@@ -900,13 +908,13 @@
                     <!-- <Item id="6261" name="（重新啟動 Notepad++ 後生效）"/> -->
                 </Cloud>
 
-                <SearchEngine title="搜索引擎">
-                    <Item id="6271" name="搜索引擎（適用於「於網上搜尋」選單指令）"/>
+                <SearchEngine title="搜尋引擎">
+                    <Item id="6271" name="搜尋引擎（適用於「於網上搜尋」選單指令）"/>
                     <Item id="6272" name="DuckDuckGo"/>
                     <Item id="6273" name="Google"/>
                     <Item id="6274" name="Bing"/>
                     <Item id="6275" name="Yahoo!"/>
-                    <Item id="6276" name="自訂搜索引擎："/>
+                    <Item id="6276" name="自訂搜尋引擎："/>
                     <Item id="6278" name="範例：https://www.google.com/search?q=$(CURRENT_WORD)"/>
                 </SearchEngine>
 
@@ -929,14 +937,14 @@
                     <Item id="6324" name="文件切換器（Ctrl + TAB）"/>
                     <Item id="6331" name="在標題列僅顯示檔案名稱（隱藏資料夾路徑）"/>
                     <Item id="6334" name="自動偵測檔案編碼"/>
-                    <Item id="6335" name="在 SQL 中視「\」為逸出字元"/>
+                    <Item id="6314" name="在尋找與取代對話方塊中使用等寬字型（需要重新啟動 Notepad++）"/>
                     <Item id="6337" name="資料夾工作區檔案副檔名："/>
                     <Item id="6114" name="啟動"/>
-                    <Item id="6115" name="自動縮排"/>
                     <Item id="6117" name="開啟「最近使用的檔案」功能"/>
                     <Item id="6344" name="窺視檔案"/>
                     <Item id="6345" name="於頁籤窺視檔案"/>
                     <Item id="6346" name="於文件導覽窺視檔案"/>
+                    <Item id="6348" name="不用選取詞填充搜尋對話框中的尋找內容"/>
                 </MISC>
             </Preference>
 
@@ -985,11 +993,11 @@
             </FindInFinder>
             <DoSaveOrNot title="儲存檔案"> 
                 <Item id="1761" name="您要儲存「$STR_REPLACE$」嗎？"/>
-                <Item id="6" name="好吧"/>
-                <Item id="7" name="不要啦"/>
-                <Item id="2" name="取消"/>
-                <Item id="4" name="全部存檔"/>
-                <Item id="5" name="全部棄存"/>
+                <Item id="6" name="好吧(&amp;Y)"/>
+                <Item id="7" name="不要啦(&amp;N)"/>
+                <Item id="2" name="取消(&amp;C)"/>
+                <Item id="4" name="全部存檔(&amp;A)"/>
+                <Item id="5" name="全部棄存(&amp;O)"/>
             </DoSaveOrNot>
         </Dialog>
         <MessageBox>
@@ -1029,6 +1037,7 @@
             <PrehistoricSystemDetected title="系統過舊" message="很抱歉，此功能不適用於過舊的系統。"/>
             <XpUpdaterProblem title="Notepad++ 更新程式" message="由於 XP 的安全機制過舊，更新程式與 XP 並不兼容。
 您要直接到 Notepad++ 網站下載最新版本嗎？"/>
+            <GUpProxyConfNeedAdminMode title="代理伺服器設定" message="請關閉 Notepad++，並在系統管理員模式下重新啟動 Notepad++ 以設定代理伺服器。"/>
             <DocTooDirtyToMonitor title="監控錯誤" message="文件已被修改，請在監視前儲存文件。"/>
             <DocNoExistToMonitor title="監控錯誤" message="文件不存在，因此無法進行監視。"/>
             <FileTooBigToOpen title="文件太大" message="文件太大，無法使用 Notepad++ 開啟。"/>
@@ -1073,6 +1082,7 @@
             <ColumnName name="名稱"/>
             <ColumnPath name="路徑"/>
             <ColumnType name="類型"/>
+            <ColumnSize name="長度"/>
         </WindowsDlg>
         <AsciiInsertion>
             <PanelTitle name="ASCII 插入面板"/>
@@ -1148,7 +1158,7 @@
             </Menus>
         </ProjectManager>
         <MiscStrings>
-            <word-chars-list-tip value="這允許您附加字元在目前單字字元集中，當滑鼠雙擊以進行選擇或以「僅符合整個單字」選項進行搜索。"/>
+            <word-chars-list-tip value="這允許您在目前單字字元集中附加字元，當滑鼠雙擊以進行選擇或以「僅符合整個單字」選項進行搜尋。"/>
             <word-chars-list-warning-begin value="警告："/>
             <word-chars-list-space-warning value="$INT_REPLACE$ 個空格"/>
             <word-chars-list-tab-warning value="$INT_REPLACE$ 個 TAB"/>
@@ -1156,8 +1166,13 @@
             <cloud-invalid-warning value="無效的路徑。"/>
             <cloud-restart-warning value="請重新啟動 Notepad++ 以使變更生效。"/>
             <cloud-select-folder value="選擇一個資料夾，以便 Notepad++ 從中讀取/寫入其設定。"/>
-            <shift-change-direction-tip value="使用「Shift + Enter」以相反方向進行搜索"/>
+            <shift-change-direction-tip value="使用「Shift + Enter」以相反方向進行搜尋"/>
             <two-find-buttons-tip value="顯示「找上一個」按鈕"/>
+			<find-in-files-filter-tip value="只在 cpp, cxx, h, hxx &amp;&amp; hpp 中找尋:
+*.cpp *.cxx *.h *.hxx *.hpp
+
+所有檔案除了 exe, obj &amp;&amp; log 之外:
+*.* !*.exe !*.obj !*.log"/>
             <find-status-top-reached value="搜尋：從下面找到相符的字串。搜尋已抵達文件開首。"/>
             <find-status-end-reached value="搜尋：從上面找到相符的字串。搜尋已抵達文件結尾。"/>
             <find-status-replaceinfiles-1-replaced value="在檔案中取代：取代了 1 個字串。"/>

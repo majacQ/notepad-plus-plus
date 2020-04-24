@@ -1,12 +1,11 @@
 <?xml version = "1.0" encoding = "utf-8" ?>
 <!--
-    Italian translation for Notepad++ 7.6.4
-    Last modified Sat, Mar 15th, 2019 by Luca Leonardi.
-    Please e-mail errors, suggestions etc. to ices_eyes(at)users.sourceforge.net.
+    Italian translation for Notepad++ 7.8.3
+    Last modified Mon, Jan 6th, 2020.
     For updates, see https://github.com/notepad-plus-plus/notepad-plus-plus/tree/master/PowerEditor/installer/nativeLang
 -->
 <NotepadPlus>
-    <Native-Langue name = "Italiano" filename = "italian.xml" version="7.7.2">
+    <Native-Langue name = "Italiano" filename = "italian.xml" version = "7.8.3">
         <Menu>
             <Main>
                 <!-- Main Menu Entries -->
@@ -16,12 +15,12 @@
                     <Item menuId = "search" name = "&amp;Cerca" />
                     <Item menuId = "view" name = "&amp;Visualizza" />
                     <Item menuId = "encoding" name = "Fo&amp;rmato" />
-                    <Item menuId = "language" name = "&amp;Lingua" />
+                    <Item menuId = "language" name = "&amp;Linguaggio" />
                     <Item menuId = "settings" name = "C&amp;onfigurazione" />
                     <Item menuId = "tools" name = "&amp;Strumenti" />
-                    <Item menuId = "macro" name = "Macro" />
-                    <Item menuId = "run" name = "Esegui" />
-                    <Item idName = "Plugins" name = "Plugin" />
+                    <Item menuId = "macro" name = "M&amp;acro" />
+                    <Item menuId = "run" name = "Ese&amp;gui" />
+                    <Item idName = "Plugins" name = "&amp;Plugin" />
                     <Item idName = "Window" name = "Fin&amp;estra" />
                 </Entries>
                 <!-- Sub Menu Entries -->
@@ -69,6 +68,7 @@
                     <Item subMenuId = "encoding-turkish" name = "Turco" />
                     <Item subMenuId = "encoding-westernEuropean" name = "Europa Occidentale" />
                     <Item subMenuId = "encoding-vietnamese" name = "Vietnamita" />
+                    <Item subMenuId = "language-userDefinedLanguage" name = "Linguaggio definito dall'utente" />
                     <Item subMenuId = "settings-import" name = "Importa" />
                     <Item subMenuId = "tools-md5" name = "MD5" />
                     <Item subMenuId = "tools-sha256" name = "SHA-256" />
@@ -104,7 +104,7 @@
                     <Item id = "41021" name = "Ripristina i file recenti" />
                     <Item id = "41022" name = "Apri cartella come workspace..." />
                     <Item id = "41023" name = "Apri con il visualizzatore predefinito" />
-                    <Item id = "41024" name = "Chiudi tutti quelli non modificati"/>
+                    <Item id = "41024" name = "Chiudi tutti quelli non modificati" />
 
                     <Item id = "42001" name = "Tag&amp;lia" />
                     <Item id = "42002" name = "&amp;Copia" />
@@ -171,7 +171,7 @@
                     <Item id = "42064" name = "Ordina righe come valori decimali (virgola) in modo decrescente" />
                     <Item id = "42065" name = "Ordina righe come valori decimali (punto) in modo crescente" />
                     <Item id = "42066" name = "Ordina righe come valori decimali (punto) in modo decrescente" />
-					
+
                     <Item id = "42067" name = "Iniziali Maiuscole" />
                     <Item id = "42068" name = "Iniziali Maiuscole (intelligente)" />
                     <Item id = "42069" name = "Frasi maiuscole" />
@@ -182,7 +182,7 @@
                     <Item id = "42074" name = "Apri cartella in Esplora Risorse" />
                     <Item id = "42075" name = "Cerca in Internet" />
                     <Item id = "42076" name = "Modifica motore di ricerca..." />
-                    <Item id = "42077" name = "Rimuovi linee duplicate consecutive"/>
+                    <Item id = "42077" name = "Rimuovi linee duplicate consecutive" />
 
                     <Item id = "43001" name = "&amp;Trova..." />
                     <Item id = "43002" name = "Trova &amp;successivo" />
@@ -200,7 +200,7 @@
                     <Item id = "43015" name = "Trova (volatile) precedente" />
                     <Item id = "43018" name = "Taglia righe con segnalibri" />
                     <Item id = "43019" name = "Copia righe con segnalibri" />
-                    <Item id = "43020" name = "Incolla (sostituisci) righe con segnalibri " />
+                    <Item id = "43020" name = "Incolla (sostituisci) righe con segnalibri" />
                     <Item id = "43021" name = "Elimina righe con segnalibro" />
                     <Item id = "43022" name = "Usa 1º stile" />
                     <Item id = "43024" name = "Usa 2º stile" />
@@ -294,10 +294,17 @@
                     <Item id = "45011" name = "Converti in UTF-8-BOM" />
                     <Item id = "45012" name = "Converti in UCS-2 BE BOM" />
                     <Item id = "45013" name = "Converti in UCS-2 LE BOM" />
+                    <Item id = "45060" name = "Big5 (tradizionale)" />
+                    <Item id = "45061" name = "GB2312 (semplificato)" />
+                    <Item id = "45054" name = "OEM 861: Islandese" />
+                    <Item id = "45057" name = "OEM 865: Nordico" />
+                    <Item id = "45053" name = "OEM 860: Portoghese" />
+                    <Item id = "45056" name = "OEM 863: Francese" />
 
                     <Item id = "46001" name = "Configura gli stili..." />
                     <Item id = "46180" name = "Definito dall&apos;utente" />
-                    <Item id = "46250" name = "Definisci la tua lingua..." />
+                    <Item id = "46250" name = "Definisci il tuo linguaggio..." />
+                    <Item id = "46300" name = "Apri cartella linguaggi definiti dall'utente..." />
 
                     <Item id = "47000" name = "Informazioni su..." />
                     <Item id = "47001" name = "Sito web Notepad++" />
@@ -333,6 +340,9 @@
                     <Item id = "50000" name = "Completa funzione" />
                     <Item id = "50001" name = "Completa parola" />
                     <Item id = "50002" name = "Parametri funzione" />
+                    <Item id = "50003" name = "Passa al documento precedente" />
+                    <Item id = "50004" name = "Passa al documento successivo" />
+                    <Item id = "50005" name = "Attiva / Dissattiva registrazione macro" />
                     <Item id = "50006" name = "Completa percorso" />
                 </Commands>
             </Main>
@@ -360,7 +370,7 @@
                 <Item CMID = "19" name = "Apri cartella file in Esplora risorse" />
                 <Item CMID = "20" name = "Apri prompt dei comandi in cartella file" />
                 <Item CMID = "21" name = "Apri con il visualizzatore predefinito" />
-                <Item CMID = "22" name = "Chiudi tutti quelli non modificati"/>
+                <Item CMID = "22" name = "Chiudi tutti quelli non modificati" />
             </TabBar>
         </Menu>
         <Dialog>
@@ -399,8 +409,8 @@
                 <Item id = "1687" name = "Se perde il focus" />
                 <Item id = "1688" name = "Sempre" />
                 <Item id = "1703" name = "&amp;. significa &apos;a capo&apos;" />
-                <Item id = "1721" name = "▲"/>
-                <Item id = "1723" name = "▼ Trova successivo"/>
+                <Item id = "1721" name = "▲" />
+                <Item id = "1723" name = "▼ Trova successivo" />
             </Find>
             <FindCharsInRange title = "Cerca caratteri...">
                 <Item id = "2910" name = "Cerca" />
@@ -478,7 +488,7 @@
                     <Item id = "2218" name = "Sottolineato" />
                     <Item id = "2219" name = "Parole chiave predefinite" />
                     <Item id = "2221" name = "Parole chiave definite dall&apos;utente" />
-                    <Item id = "2225" name = "Lingua: " />
+                    <Item id = "2225" name = "Linguaggio: " />
                     <Item id = "2226" name = "Abilita colore globale in primo piano" />
                     <Item id = "2227" name = "Abilita colore globale per lo sfondo" />
                     <Item id = "2228" name = "Abilita stile globale del carattere" />
@@ -516,13 +526,13 @@
                 <Item id = "5007" name = "Questo rimuoverà la scelta rapida" />
                 <Item id = "5012" name = "TROVATO CONFLITTO!" />
             </ShortcutMapperSubDialg>
-            <UserDefine title = "Lingua definita dall&apos;utente">
+            <UserDefine title = "Linguaggio definito dall&apos;utente">
                 <Item id = "20001" name = "Ancora" />
                 <Item id = "20002" name = "Rinomina" />
                 <Item id = "20003" name = "Crea nuovo..." />
                 <Item id = "20004" name = "Rimuovi" />
                 <Item id = "20005" name = "Salva come..." />
-                <Item id = "20007" name = "Lingua personalizzata: " />
+                <Item id = "20007" name = "Linguaggio personalizzato: " />
                 <Item id = "20009" name = "Estensione:" />
                 <Item id = "20011" name = "Trasparenza" />
                 <Item id = "20012" name = "Ignora Maius./minus." />
@@ -753,7 +763,7 @@
                     <Item id = "6215" name = "Abilita antialiasing caratteri" />
                     <Item id = "6234" name = "Disabilita scrolling avanzato&#xA;(in caso di problemi con touchpad)" />
                     <Item id = "6235" name = "Nessun bordo" />
-					<Item id = "6236" name = "Abilita scorrimento oltre l&apos;ultima riga" />
+                    <Item id = "6236" name = "Abilita scorrimento oltre l&apos;ultima riga" />
                 </Scintillas>
                 <NewDoc title = "Nuovo documento">
                     <Item id = "6401" name = "Formato (fine riga)" />
@@ -766,7 +776,7 @@
                     <Item id = "6408" name = "UTF-8 con BOM" />
                     <Item id = "6409" name = "UCS-2 Big Endian con BOM" />
                     <Item id = "6410" name = "UCS-2 Little Endian con BOM" />
-                    <Item id = "6411" name = "Lingua predefinita:" />
+                    <Item id = "6411" name = "Linguaggio predefinito:" />
                     <Item id = "6419" name = "Nuovo Documento" />
                     <Item id = "6420" name = "Applica all&apos;apertura di file ANSI" />
                 </NewDoc>
@@ -788,6 +798,7 @@
                     <Item id = "6429" name = "Visualizza" />
                 </RecentFilesHistory>
                 <FileAssoc title = "Associazione file">
+                    <Item id = "4008" name = "Per favore chiudi Notepad++ e rilancia Notepad++ con privilegi di Amministratore per usare questa funzionalità" />
                     <Item id = "4009" name = "Estensioni supportate:" />
                     <Item id = "4010" name = "Estensioni registrate:" />
                 </FileAssoc>
@@ -795,18 +806,19 @@
                     <Item id = "6505" name = "Linguaggi disponibili" />
                     <Item id = "6506" name = "Linguaggi disabilitati" />
                     <Item id = "6507" name = "Utilizza menu compatto" />
-                    <Item id = "6508" name = "Menu lingua" />
+                    <Item id = "6508" name = "Menu linguaggio" />
                     <Item id = "6510" name = "Usa predefinito" />
                     <Item id = "6301" name = "Impostazioni Tabulazioni" />
                     <Item id = "6302" name = "Sostituisci con spazi" />
                     <Item id = "6303" name = "Dimensione tabulazione:" />
+                    <Item id = "6335" name = "Backslash è il carattere di escape in SQL" />
                 </Language>
                 <Highlighting title = "Evidenziazione">
                     <Item id = "6333" name = "Evidenziazione Intelligente" />
                     <Item id = "6326" name = "Abilita" />
                     <Item id = "6332" name = "L&apos;evidenziazione è case-sensitive" />
-					<Item id = "6338" name = "Identifica solo parole intere" />
-					<Item id = "6339" name = "Utilizza impostazioni finestra di ricerca" />
+                    <Item id = "6338" name = "Identifica solo parole intere" />
+                    <Item id = "6339" name = "Utilizza impostazioni finestra di ricerca" />
                     <Item id = "6340" name = "Evidenzia anche nell'altra vista" />
                     <Item id = "6329" name = "Evidenzia Tag Corrispondenti" />
                     <Item id = "6327" name = "Abilita" />
@@ -858,6 +870,7 @@
                     <Item id = "6317" name = "Backup dettagliato" />
                 </Backup>
                 <AutoCompletion title = "Auto-completamento">
+                    <Item id = "6115" name = "Auto-indentazione" />
                     <Item id = "6807" name = "Auto-Completamento" />
                     <Item id = "6808" name = "Attiva l&apos;auto-completamento su ogni input" />
                     <Item id = "6809" name = "Completamento funzione" />
@@ -935,15 +948,14 @@
                     <Item id = "6325" name = "Vai all&apos;ultima riga dopo l&apos;aggiornamento" />
 
                     <Item id = "6334" name = "Rileva automaticamente codifica caratteri" />
-                    <Item id = "6115" name = "Indentazione automatica" />
                     <Item id = "6308" name = "Minimizza nell&apos;area di notifica" />
                     <Item id = "6331" name = "Visualizza solo nome file nella barra del titolo" />
-                    <Item id = "6335" name = "Backslash è il carattere di escape in SQL" />
+                    <Item id = "6323" name = "Aggiorna automaticamente Notepad++" />
+                    <Item id = "6348" name = "Non riempire la casella di ricerca nella finestra di ricerca con parole selezionate" />
+                    <Item id = "6314" name = "Usa carattere a spaziatura fissa nella finestra di ricerca (Necessità di riavviare Notepad++)" />
 
                     <Item id = "6322" name = "Est. file di sessione:" />
                     <Item id = "6337" name = "Est. file workspace:" />
-
-                    <Item id = "6323" name = "Aggiorna automaticamente Notepad++" />
                 </MISC>
             </Preference>
             <MultiMacro title = "Esegui macro più volte">
@@ -990,12 +1002,12 @@
                 <Item id = "1720" name = "&amp;. significa a capo" />
             </FindInFinder>
             <DoSaveOrNot title="Salva">
-                <Item id="1761" name="Salva file &quot;$STR_REPLACE$&quot; ?"/>
-                <Item id="6" name="Sì"/>
-                <Item id="7" name="No"/>
-                <Item id="2" name="Annulla"/>
-                <Item id="4" name="Sì a tutto"/>
-                <Item id="5" name="No a tutto"/>
+                <Item id = "1761" name = "Salvare il file &quot;$STR_REPLACE$&quot;?" />
+                <Item id = "6" name = "&amp;Sì" />
+                <Item id = "7" name = "&amp;No" />
+                <Item id = "2" name = "&amp;Annulla" />
+                <Item id = "4" name = "S&amp;ì a tutto" />
+                <Item id = "5" name = "N&amp;o a tutto" />
             </DoSaveOrNot>
         </Dialog>
         <MessageBox> <!-- $INT_REPLACE$ is a place holder, don't translate it -->
@@ -1047,6 +1059,7 @@ Vuoi ricaricarlo e perdere tutte le modifiche apportate in Notepad++?" />
             <PrehistoricSystemDetected title = "Sistema preistorico trovato" message = "Sembra tu stia usando un sistema preistorico. Questa funzionalità necessità di un sistema più moderno, scusaci." />
             <XpUpdaterProblem title = "Aggiornamento Notepad++" message = "L'aggiornamento automatico di Notepad++ non è compatibile con XP a causa di un sistema di permessi obsoleto.
 Vuoi andare nella pagina di Notepad++ per scaricare l'aggiornamento manualmente?" />
+            <GUpProxyConfNeedAdminMode title = "Impostazioni proxy" message = "Per favore rilancia Notepad++ con privilegi di amministratore per configurare il proxy." />
             <DocTooDirtyToMonitor title = "Problema monitoraggio" message = "Il documento è sporco. Salva le modifiche prima di avviare il monitoraggio." />
             <DocNoExistToMonitor title = "Problema monitoraggio" message = "Il file deve esistere per essere monitorato." />
             <FileTooBigToOpen title = "Problema dimensione file" message = "Il file è troppo grande per essere aperto con Notepad++" />
@@ -1074,7 +1087,7 @@ Sei sicuro di voler rimuovere questa cartella dal progetto?" />
             <ProjectPanelReloadError title = "Ricarica Workspace" message = "Impossibile trovare il file da ricaricare." />
             <ProjectPanelReloadDirty title = "Ricarica Workspace" message = "Il workspace attuale è stato modificato. Ricaricandolo perderai tutte le modifiche.
 Vuoi continuare?" />
-            <UDLNewNameError title = "Errore UDL" message = "Questo nome è utilizzato da un altro lingua,
+            <UDLNewNameError title = "Errore UDL" message = "Questo nome è utilizzato da un altro linguaggio,
 usane un altro." />
             <UDLRemoveCurrentLang title = "Rimuovi il linguaggio attuale" message = "Sei sicuro?" />
             <SCMapperDoDeleteOrNot title = "Sei sicuro?" message = "Sei sicuro di voler eliminare questa scorciatoia?" />
@@ -1084,14 +1097,14 @@ Vuoi avviare Notepad++ come amministratore?" />
             <OpenInAdminModeWithoutCloseCurrent title = "Salvataggio fallito" message = "Il file non può essere salvato e potrebbe essere protetto.
 Vuoi avviare Notepad++ come amministratore?" />
             <OpenInAdminModeFailed title = "Apertura come amministratore fallita" message = "Notepad++ non può essere aperto come amministratore." />
-            <ViewInBrowser title="Visualiza file attuale nel browser" message="Applicazione non trovata nel sistema."/>
+            <ViewInBrowser title="Visualiza file attuale nel browser" message="Applicazione non trovata nel sistema." />
             <ExitToUpdatePlugins title="Notepad++ sta per chiudersi" message="Se fai clic su 'Sì', uscirai da Notepad++ per continuare le operazioni.
 Notepad++ verrà riavviato dopo che le operazioni saranno state completate.
-Vuoi continuare?"/>
-            <NeedToRestartToLoadPlugins title="Notepad++ deve essere riavviato" message="Devi riavviare Notepad++ per caricare i plugin che hai installato."/>
+Vuoi continuare?" />
+            <NeedToRestartToLoadPlugins title="Notepad++ deve essere riavviato" message="Devi riavviare Notepad++ per caricare i plugin che hai installato." />
         </MessageBox>
         <ClipboardHistory>
-            <PanelTitle name = "Storia Appunti" />
+            <PanelTitle name = "Cronologia Appunti" />
         </ClipboardHistory>
         <DocSwitcher>
             <PanelTitle name = "Documenti" />
@@ -1106,10 +1119,10 @@ Vuoi continuare?"/>
         <AsciiInsertion>
             <PanelTitle name = "Pannello Inserimento ASCII" />
             <ColumnVal name = "Valore" />
-            <ColumnHex name="Esadecimale"/>
+            <ColumnHex name = "Esadecimale" />
             <ColumnChar name = "Carattere" />
-            <ColumnHtmlNumber name = "Numero HTML"/>
-            <ColumnHtmlName name = "Codice HTML"/>
+            <ColumnHtmlNumber name = "Numero HTML" />
+            <ColumnHtmlName name = "Codice HTML" />
         </AsciiInsertion>
         <DocumentMap>
             <PanelTitle name = "Mappa Documento" />
@@ -1120,29 +1133,29 @@ Vuoi continuare?"/>
             <ReloadTip name = "Ricarica" />
         </FunctionList>
         <FolderAsWorkspace>
-            <PanelTitle name="cartella come Workspace"/>
-            <SelectFolderFromBrowserString name="Seleziona una cartella da aggiungere come pannello spazio lavoro"/>
+            <PanelTitle name = "Cartella come Workspace" />
+            <SelectFolderFromBrowserString name = "Seleziona una cartella da aggiungere come pannello spazio lavoro" />
             <Menus>
-                <Item id="3511" name="Rimuovi"/>
-                <Item id="3512" name="Rimuovi tutto"/>
-                <Item id="3513" name="Aggiungi"/>
-                <Item id="3514" name="Esegui dal sistema"/>
-                <Item id="3515" name="Apri"/>
-                <Item id="3516" name="Copia percorso"/>
-                <Item id="3517" name="Trova nei file..."/>
-                <Item id="3518" name="Sfoglia qui"/>
-                <Item id="3519" name="CMD qui"/>
-                <Item id="3520" name="Copia nome file"/>
+                <Item id = "3511" name = "Rimuovi" />
+                <Item id = "3512" name = "Rimuovi tutto" />
+                <Item id = "3513" name = "Aggiungi" />
+                <Item id = "3514" name = "Esegui dal sistema" />
+                <Item id = "3515" name = "Apri" />
+                <Item id = "3516" name = "Copia percorso" />
+                <Item id = "3517" name = "Trova nei file..." />
+                <Item id = "3518" name = "Sfoglia qui" />
+                <Item id = "3519" name = "CMD qui" />
+                <Item id = "3520" name = "Copia nome file" />
             </Menus>
         </FolderAsWorkspace>
         <ProjectManager>
             <PanelTitle name = "Progetti" />
-            <WorkspaceRootName name = "Spazio lavoro" />
+            <WorkspaceRootName name = "Workspace" />
             <NewProjectName name = "Nome progetto" />
             <NewFolderName name = "Nome cartella" />
             <Menus>
                 <Entries>
-                    <Item id = "0" name = "Spazio lavoro" />
+                    <Item id = "0" name = "Workspace" />
                     <Item id = "1" name = "Modifica" />
                 </Entries>
                 <WorkspaceMenu>
@@ -1183,7 +1196,7 @@ Vuoi continuare?"/>
         </ProjectManager>
         <MiscStrings>
             <!-- $INT_REPLACE$ is a place holder, don't translate it -->
-            <word-chars-list-tip value = "Permette di includere caratteri addizionali nella lista di caratteri considerati una parola, quando effetti un doppio clic per selezionare, o effetti una ricerca con l'opzione &quot;Solo parole intere&quot; selezionata" />
+            <word-chars-list-tip value = "Permette di includere caratteri addizionali nella lista di caratteri considerati una parola, quando effetti un doppio clic per selezionare, o effettui una ricerca con l'opzione &quot;Solo parole intere&quot; selezionata" />
             <word-chars-list-warning-begin value = "Attenzione: " />
             <word-chars-list-space-warning value = "$INT_REPLACE$ spazi" />
             <word-chars-list-tab-warning value = "$INT_REPLACE$ tab" />
@@ -1193,6 +1206,10 @@ Vuoi continuare?"/>
             <cloud-select-folder value = "Seleziona una cartella da dove Notepad++ possa leggere o scrivere le proprie impostazioni" />
             <shift-change-direction-tip value = "Utilizza Shift+Invio per cercare nella direzione opposta" />
             <two-find-buttons-tip value = "Modalità ricerca a 2 pulsanti" />
+            <find-in-files-filter-tip value = "Cerca in cpp, cxx, h, hxx &amp;&amp; hpp:
+*.cpp *.cxx *.h *.hxx *.hpp
+Cerca in tutti i file eccetto exe, obj &amp;&amp; log:
+*.* !*.exe !*.obj !*.log" />
             <find-status-top-reached value = "Cerca: trovata la prima occorrenza dal basso. È stato raggiunto l&apos;inizio del documento." />
             <find-status-end-reached value = "Cerca: trovata la prima occorrenza dall&apos;alto. È stata raggiunta la fine del documento." />
             <find-status-replaceinfiles-1-replaced value = "Sostituisci: 1 occorrenza è stata sostituita" />
@@ -1211,7 +1228,7 @@ Vuoi continuare?"/>
             <find-status-replaceall-1-replaced value = "Sostituisci tutti: 1 occorrenza è stata sostituita" />
             <find-status-replaceall-nb-replaced value = "Sostituisci tutti: $INT_REPLACE$ occorrenze sono state sostituite" />
             <find-status-replaceall-readonly value = "Sostituisci tutti: impossibile sostituire il testo. Il documento attuale è in sola lettura" />
-            <find-status-replace-end-reached value = "Sostituisci: sostituita la prima occorrenza dall'&apos;alto. È stata raggiunta la fine del documento " />
+            <find-status-replace-end-reached value = "Sostituisci: sostituita la prima occorrenza dall'&apos;alto. È stata raggiunta la fine del documento" />
             <find-status-replace-top-reached value = "Sostituisci: sostituita la prima occorrenza dal basso. È stato raggiunto l&apos;inizio del documento" />
             <find-status-replaced-next-found value = "Sostituisci: 1 occorrenza è stata sostituita. Trovata l'occorrenza successiva" />
             <find-status-replaced-next-not-found value = "Sostituisci:1 occorrenza è stata sostituita. Nessuna occorrenza successiva" />
@@ -1233,22 +1250,22 @@ Vuoi continuare?"/>
             <tabrename-newname value="Nuovo nome: " />
             <recent-file-history-maxfile value="File max: " />
             <language-tabsize value="Dimensione tab: " />
-            <userdefined-title-new value="Crea nuovo lingua..." />
-            <userdefined-title-save value="Salva lingua attuale come..." />
-            <userdefined-title-rename value="Rinomina lingua attuale" />
+            <userdefined-title-new value="Crea nuovo linguaggio..." />
+            <userdefined-title-save value="Salva linguaggio attuale come..." />
+            <userdefined-title-rename value="Rinomina linguaggio attuale" />
             <autocomplete-nb-char value="N. caratteri: " />
             <edit-verticaledge-nb-col value="N. colonne:" />
-            <summary value="Sommario"/>
-            <summary-filepath value="Percorso completo file: "/>
-            <summary-filecreatetime value="Creato: "/>
-            <summary-filemodifytime value="Modificato: "/>
-            <summary-nbchar value="N. caratteri (esclusi caratteri fine linea): "/>
-            <summary-nbword value="Parole: "/>
-            <summary-nbline value="Linee: "/>
-            <summary-nbbyte value="Lunghezza documento: "/>
-            <summary-nbsel1 value=" caratteri selezionati ("/>
-            <summary-nbsel2 value=" byte) nell'"/>
-            <summary-nbrange value=" intervallo"/>
+            <summary value="Sommario" />
+            <summary-filepath value="Percorso completo file: " />
+            <summary-filecreatetime value="Creato: " />
+            <summary-filemodifytime value="Modificato: " />
+            <summary-nbchar value="N. caratteri (esclusi caratteri fine linea): " />
+            <summary-nbword value="Parole: " />
+            <summary-nbline value="Linee: " />
+            <summary-nbbyte value="Lunghezza documento: " />
+            <summary-nbsel1 value=" caratteri selezionati (" />
+            <summary-nbsel2 value=" byte) in " />
+            <summary-nbrange value=" intervalli" />
         </MiscStrings>
     </Native-Langue>
 </NotepadPlus>

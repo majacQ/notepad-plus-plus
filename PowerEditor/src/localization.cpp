@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -36,9 +36,9 @@ using namespace std;
 
 
 MenuPosition menuPos[] = {
-	//==============================================
-	//  {L0,  L1,  L2,    id},
-	//==============================================
+//==============================================
+//	{L0, L1, L2, id},
+//==============================================
 	{ 0, -1, -1, "file" },
 	{ 1, -1, -1, "edit" },
 	{ 2, -1, -1, "search" },
@@ -97,6 +97,8 @@ MenuPosition menuPos[] = {
 	{ 4,  5, 13, "encoding-turkish" },
 	{ 4,  5, 14, "encoding-westernEuropean" },
 	{ 4,  5, 15, "encoding-vietnamese" },
+
+	{ 5, 23, -1, "language-userDefinedLanguage" },
 
 	{ 6,  4, -1, "settings-import" },
 
@@ -1044,6 +1046,45 @@ TiXmlNodeA * NativeLangSpeaker::searchDlgNode(TiXmlNodeA *node, const char *dlgT
 		if (dlgNode) return dlgNode;
 	}
 	return NULL;
+}
+
+bool NativeLangSpeaker::getDoSaveOrNotStrings(generic_string& title, generic_string& msg)
+{
+	if (!_nativeLangA) return false;
+
+	TiXmlNodeA *dlgNode = _nativeLangA->FirstChild("Dialog");
+	if (!dlgNode) return false;
+
+	dlgNode = searchDlgNode(dlgNode, "DoSaveOrNot");
+	if (!dlgNode) return false;
+
+	const char *title2set = (dlgNode->ToElement())->Attribute("title");
+	if (!title2set || !title2set[0]) return false;
+
+	WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+	const wchar_t *titleW = wmc.char2wchar(title2set, _nativeLangEncoding);
+	title = titleW;
+
+	for (TiXmlNodeA *childNode = dlgNode->FirstChildElement("Item");
+		childNode;
+		childNode = childNode->NextSibling("Item"))
+	{
+		TiXmlElementA *element = childNode->ToElement();
+		int id;
+		const char *sentinel = element->Attribute("id", &id);
+		const char *name = element->Attribute("name");
+		if (sentinel && (name && name[0]))
+		{
+			if (id == 1761)
+			{
+				const wchar_t *msgW = wmc.char2wchar(name, _nativeLangEncoding);
+				msg = msgW;
+
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 bool NativeLangSpeaker::changeDlgLang(HWND hDlg, const char *dlgTagName, char *title, size_t titleMaxSize)

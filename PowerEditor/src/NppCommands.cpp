@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -37,7 +37,7 @@
 #include "functionListPanel.h"
 #include "fileBrowser.h"
 #include "Sorters.h"
-#include "verifySignedFile.h"
+#include "verifySignedfile.h"
 #include "md5.h"
 #include "sha-256.h"
 
@@ -47,8 +47,6 @@ std::mutex command_mutex;
 
 void Notepad_plus::macroPlayback(Macro macro)
 {
-	std::lock_guard<std::mutex> lock(command_mutex);
-
 	_playingBackMacro = true;
 	_pEditView->execute(SCI_BEGINUNDOACTION);
 
@@ -91,7 +89,7 @@ void Notepad_plus::command(int id)
 
 		case IDM_FILE_OPEN_CMD:
 		{
-			Command cmd(TEXT("cmd"));
+			Command cmd(NppParameters::getInstance().getNppGUI()._commandLineInterpreter.c_str());
 			cmd.run(_pPublicInterface->getHSelf(), TEXT("$(CURRENT_DIRECTORY)"));
 		}
 		break;
@@ -379,7 +377,7 @@ void Notepad_plus::command(int id)
 								_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(""));
 								_pEditView->execute(SCI_ADDTEXT, *lpLen, reinterpret_cast<LPARAM>(lpchar));
 
-								GlobalUnlock(hglb);
+								GlobalUnlock(hglbLen);
 							}
 						}
 					}
@@ -464,7 +462,7 @@ void Notepad_plus::command(int id)
 			if (nppGui._searchEngineChoice == nppGui.se_custom)
 			{
 				url = nppGui._searchEngineCustom;
-				remove_if(url.begin(), url.end(), isspace);
+				remove_if(url.begin(), url.end(), _istspace);
 
 				auto httpPos = url.find(TEXT("http://"));
 				auto httpsPos = url.find(TEXT("https://"));
@@ -988,8 +986,13 @@ void Notepad_plus::command(int id)
 				dlgID = MARK_DLG;
 			_findReplaceDlg.doDialog(dlgID, _nativeLangSpeaker.isRTL());
 
-			_pEditView->getGenericSelectedText(str, strSize);
-			_findReplaceDlg.setSearchText(str);
+			const NppGUI & nppGui = (NppParameters::getInstance()).getNppGUI();
+			if (!nppGui._stopFillingFindField)
+			{
+				_pEditView->getGenericSelectedText(str, strSize);
+				_findReplaceDlg.setSearchText(str);
+			}
+
 			setFindReplaceFolderFilter(NULL, NULL);
 
 			if (isFirstTime)
@@ -2501,7 +2504,7 @@ void Notepad_plus::command(int id)
 
 				// Paste the texte, restore buffer status
 				_pEditView->execute(SCI_PASTE);
-				_pEditView->restoreCurrentPos();
+				_pEditView->restoreCurrentPosPreStep();
 
 				// Restore the previous clipboard data
 				::OpenClipboard(_pPublicInterface->getHSelf());
@@ -2794,8 +2797,9 @@ void Notepad_plus::command(int id)
 
 			if (doAboutDlg)
 			{
-				bool isFirstTime = !_aboutDlg.isCreated();
+				//bool isFirstTime = !_aboutDlg.isCreated();
 				_aboutDlg.doDialog();
+				/*
 				if (isFirstTime && _nativeLangSpeaker.getNativeLangA())
 				{
 					if (_nativeLangSpeaker.getLangEncoding() == NPP_CP_BIG5)
@@ -2808,6 +2812,7 @@ void Notepad_plus::command(int id)
 						::SetWindowText(hItem, authorNameW);
 					}
 				}
+				*/
 			}
 			break;
 		}
@@ -2846,9 +2851,9 @@ void Notepad_plus::command(int id)
 			break;
 		}
 
-		case IDM_ONLINEHELP:
+		case IDM_ONLINEDOCUMENT:
 		{
-			::ShellExecute(NULL, TEXT("open"), TEXT("http://docs.notepad-plus-plus.org/"), NULL, NULL, SW_SHOWNORMAL);
+			::ShellExecute(NULL, TEXT("open"), TEXT("https://npp-user-manual.org/"), NULL, NULL, SW_SHOWNORMAL);
 			break;
 		}
 
@@ -2861,7 +2866,7 @@ void Notepad_plus::command(int id)
 
 		case IDM_FORUM:
 		{
-			::ShellExecute(NULL, TEXT("open"), TEXT("https://notepad-plus-plus.org/community/"), NULL, NULL, SW_SHOWNORMAL);
+			::ShellExecute(NULL, TEXT("open"), TEXT("https://community.notepad-plus-plus.org/"), NULL, NULL, SW_SHOWNORMAL);
 			break;
 		}
 
@@ -2870,13 +2875,7 @@ void Notepad_plus::command(int id)
 			::ShellExecute(NULL, TEXT("open"), TEXT("https://gitter.im/notepad-plus-plus/notepad-plus-plus"), NULL, NULL, SW_SHOWNORMAL);
 			break;
 		}
-		/*
-		case IDM_PLUGINSHOME:
-		{
-			::ShellExecute(NULL, TEXT("open"), TEXT("http://docs.notepad-plus-plus.org/index.php/Plugin_Central"), NULL, NULL, SW_SHOWNORMAL);
-			break;
-		}
-		*/
+
 		case IDM_UPDATE_NPP :
 		case IDM_CONFUPDATERPROXY :
 		{
@@ -2892,7 +2891,7 @@ void Notepad_plus::command(int id)
 
 				if (res == IDYES)
 				{
-					::ShellExecute(NULL, TEXT("open"), TEXT("https://notepad-plus-plus.org/download/"), NULL, NULL, SW_SHOWNORMAL);
+					::ShellExecute(NULL, TEXT("open"), TEXT("https://notepad-plus-plus.org/downloads/"), NULL, NULL, SW_SHOWNORMAL);
 				}
 			}
 			else
@@ -2916,6 +2915,15 @@ void Notepad_plus::command(int id)
 					generic_string param;
 					if (id == IDM_CONFUPDATERPROXY)
 					{
+						if (!_isAdministrator)
+						{
+							_nativeLangSpeaker.messageBox("GUpProxyConfNeedAdminMode",
+								_pPublicInterface->getHSelf(),
+								TEXT("Please relaunch Notepad++ in Admin mode to configure proxy."),
+								TEXT("Proxy Settings"),
+								MB_OK | MB_APPLMODAL);
+							return;
+						}
 						param = TEXT("-options");
 					}
 					else
@@ -3056,6 +3064,13 @@ void Notepad_plus::command(int id)
 			}
 		}
         break;
+		
+		case IDM_LANG_OPENUDLDIR:
+		{
+			generic_string userDefineLangFolderPath = NppParameters::getInstance().getUserDefineLangFolderPath();
+			::ShellExecute(_pPublicInterface->getHSelf(), TEXT("open"), userDefineLangFolderPath.c_str(), NULL, NULL, SW_SHOW);
+			break;
+		}
 
         case IDC_PREV_DOC :
         case IDC_NEXT_DOC :
@@ -3251,31 +3266,6 @@ void Notepad_plus::command(int id)
 			COLORREF colour = (NppParameters::getInstance()).getCurLineHilitingColour();
 			_mainEditView.setCurrentLineHiLiting(!_pEditView->isCurrentLineHiLiting(), colour);
 			_subEditView.setCurrentLineHiLiting(!_pEditView->isCurrentLineHiLiting(), colour);
-		}
-		break;
-
-		case IDM_VIEW_EDGEBACKGROUND:
-		case IDM_VIEW_EDGELINE:
-		case IDM_VIEW_EDGENONE:
-		{
-			int mode;
-			switch (id)
-			{
-			case IDM_VIEW_EDGELINE:
-			{
-				mode = EDGE_LINE;
-				break;
-			}
-			case IDM_VIEW_EDGEBACKGROUND:
-			{
-				mode = EDGE_BACKGROUND;
-				break;
-			}
-			default:
-				mode = EDGE_NONE;
-			}
-			_mainEditView.execute(SCI_SETEDGEMODE, mode);
-			_subEditView.execute(SCI_SETEDGEMODE, mode);
 		}
 		break;
 
@@ -3505,6 +3495,13 @@ void Notepad_plus::command(int id)
 			case IDM_SEARCH_MARKALLEXT5      :
 			case IDM_SEARCH_UNMARKALLEXT5    :
 			case IDM_SEARCH_CLEARALLMARKS    :
+			case IDM_FORMAT_TODOS  :
+			case IDM_FORMAT_TOUNIX :
+			case IDM_FORMAT_TOMAC  :
+			case IDM_VIEW_IN_FIREFOX :
+			case IDM_VIEW_IN_CHROME  :
+			case IDM_VIEW_IN_EDGE    :
+			case IDM_VIEW_IN_IE      :
 				_macro.push_back(recordedMacroStep(id));
 				break;
 		}

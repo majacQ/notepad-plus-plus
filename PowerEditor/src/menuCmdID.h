@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -26,8 +26,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
-#ifndef MENUCMDID_H
-#define MENUCMDID_H
+#pragma once
 
 #define    IDM    40000
 
@@ -281,8 +280,8 @@
     #define    IDM_VIEW_ZOOMOUT                   (IDM_VIEW + 24)
     #define    IDM_VIEW_TAB_SPACE                 (IDM_VIEW + 25)
     #define    IDM_VIEW_EOL                       (IDM_VIEW + 26)
-    #define    IDM_VIEW_EDGELINE                  (IDM_VIEW + 27)
-    #define    IDM_VIEW_EDGEBACKGROUND            (IDM_VIEW + 28)
+    //#define    IDM_VIEW_EDGELINE                  (IDM_VIEW + 27)
+    //#define    IDM_VIEW_EDGEBACKGROUND            (IDM_VIEW + 28)
     #define    IDM_VIEW_TOGGLE_UNFOLDALL          (IDM_VIEW + 29)
     #define    IDM_VIEW_FOLD_CURRENT              (IDM_VIEW + 30)
     #define    IDM_VIEW_UNFOLD_CURRENT            (IDM_VIEW + 31)
@@ -291,7 +290,7 @@
     #define    IDM_VIEW_ALWAYSONTOP               (IDM_VIEW + 34)
     #define    IDM_VIEW_SYNSCROLLV                (IDM_VIEW + 35)
     #define    IDM_VIEW_SYNSCROLLH                (IDM_VIEW + 36)
-    #define    IDM_VIEW_EDGENONE                  (IDM_VIEW + 37)
+    //#define    IDM_VIEW_EDGENONE                  (IDM_VIEW + 37)
     #define    IDM_VIEW_DRAWTABBAR_CLOSEBOTTUN    (IDM_VIEW + 38)
     #define    IDM_VIEW_DRAWTABBAR_DBCLK2CLOSE    (IDM_VIEW + 39)
     #define    IDM_VIEW_REFRESHTABAR              (IDM_VIEW + 40)
@@ -522,7 +521,8 @@
 
     #define    IDM_LANG_USER               (IDM_LANG + 180)     //46180: Used for translation
     #define    IDM_LANG_USER_LIMIT         (IDM_LANG + 210)     //46210: Ajust with IDM_LANG_USER
-    #define    IDM_LANG_USER_DLG           (IDM_LANG + 250)     //46250: Used for translation 
+    #define    IDM_LANG_USER_DLG           (IDM_LANG + 250)     //46250: Used for translation
+    #define    IDM_LANG_OPENUDLDIR         (IDM_LANG + 300)
 
 
     
@@ -530,7 +530,7 @@
 #define    IDM_ABOUT    (IDM  + 7000)
     #define    IDM_HOMESWEETHOME    (IDM_ABOUT  + 1)
     #define    IDM_PROJECTPAGE      (IDM_ABOUT  + 2)
-    #define    IDM_ONLINEHELP       (IDM_ABOUT  + 3)
+    #define    IDM_ONLINEDOCUMENT   (IDM_ABOUT  + 3)
     #define    IDM_FORUM            (IDM_ABOUT  + 4)
     //#define    IDM_PLUGINSHOME      (IDM_ABOUT  + 5)
     #define    IDM_UPDATE_NPP       (IDM_ABOUT  + 6)
@@ -575,5 +575,3 @@
     #define IDM_SYSTRAYPOPUP_NEW_AND_PASTE    (IDM_SYSTRAYPOPUP + 3)
     #define IDM_SYSTRAYPOPUP_OPENFILE         (IDM_SYSTRAYPOPUP + 4)
     #define IDM_SYSTRAYPOPUP_CLOSE            (IDM_SYSTRAYPOPUP + 5)
-
-#endif //MENUCMDID_H

@@ -1,5 +1,5 @@
 ﻿// This file is part of Notepad++ project
-// Copyright (C)2003 Don HO <don.h@free.fr>
+// Copyright (C)2020 Don HO <don.h@free.fr>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -134,20 +134,20 @@ Notepad_plus::Notepad_plus()
 {
 	ZeroMemory(&_prevSelectedRange, sizeof(_prevSelectedRange));
 
-
-	TiXmlDocumentA *nativeLangDocRootA = (NppParameters::getInstance()).getNativeLangA();
+	NppParameters& nppParam = NppParameters::getInstance();
+	TiXmlDocumentA *nativeLangDocRootA = nppParam.getNativeLangA();
     _nativeLangSpeaker.init(nativeLangDocRootA);
 
-	LocalizationSwitcher & localizationSwitcher = (NppParameters::getInstance()).getLocalizationSwitcher();
+	LocalizationSwitcher & localizationSwitcher = nppParam.getLocalizationSwitcher();
     const char *fn = _nativeLangSpeaker.getFileName();
     if (fn)
     {
         localizationSwitcher.setFileName(fn);
     }
 
-	(NppParameters::getInstance()).setNativeLangSpeaker(&_nativeLangSpeaker);
+	nppParam.setNativeLangSpeaker(&_nativeLangSpeaker);
 
-	TiXmlDocument *toolIconsDocRoot = (NppParameters::getInstance()).getToolIcons();
+	TiXmlDocument *toolIconsDocRoot = nppParam.getToolIcons();
 
 	if (toolIconsDocRoot)
 	{
@@ -172,6 +172,7 @@ Notepad_plus::Notepad_plus()
 	else
 		is_admin = false;
 
+	nppParam.setAdminMode(is_admin == TRUE);
 	_isAdministrator = is_admin ? true : false;
 }
 
@@ -290,10 +291,7 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	_mainEditView.wrap(svp1._doWrap);
 	_subEditView.wrap(svp1._doWrap);
 
-	_mainEditView.execute(SCI_SETEDGECOLUMN, svp1._edgeNbColumn);
-	_mainEditView.execute(SCI_SETEDGEMODE, svp1._edgeMode);
-	_subEditView.execute(SCI_SETEDGECOLUMN, svp1._edgeNbColumn);
-	_subEditView.execute(SCI_SETEDGEMODE, svp1._edgeMode);
+	::SendMessage(hwnd, NPPM_INTERNAL_EDGEMULTISETSIZE, 0, 0);
 
 	_mainEditView.showEOL(svp1._eolShow);
 	_subEditView.showEOL(svp1._eolShow);
@@ -789,6 +787,16 @@ bool Notepad_plus::saveGUIParams()
 	nppGUI._appPos.bottom = posInfo.rcNormalPosition.bottom - posInfo.rcNormalPosition.top;
 	nppGUI._isMaximized = ((IsZoomed(_pPublicInterface->getHSelf()) != 0) || (posInfo.flags & WPF_RESTORETOMAXIMIZED));
 
+	if (_findReplaceDlg.getHSelf() != NULL)
+	{
+		::GetWindowPlacement(_findReplaceDlg.getHSelf(), &posInfo);
+
+		nppGUI._findWindowPos.left = posInfo.rcNormalPosition.left;
+		nppGUI._findWindowPos.top = posInfo.rcNormalPosition.top;
+		nppGUI._findWindowPos.right = posInfo.rcNormalPosition.right;
+		nppGUI._findWindowPos.bottom = posInfo.rcNormalPosition.bottom;
+	}
+
 	saveDockingParams();
 	(NppParameters::getInstance()).createXmlTreeFromGUIParams();
 	return true;
@@ -1067,7 +1075,8 @@ int Notepad_plus::getHtmlXmlEncoding(const TCHAR *fileName) const
 }
 
 
-bool Notepad_plus::replaceInOpenedFiles() {
+bool Notepad_plus::replaceInOpenedFiles()
+{
 
 	ScintillaEditView *pOldView = _pEditView;
 	_pEditView = &_invisibleEditView;
@@ -1875,6 +1884,30 @@ void Notepad_plus::filePrint(bool showDialog)
 
 int Notepad_plus::doSaveOrNot(const TCHAR* fn, bool isMulti)
 {
+	// In case Notepad++ is iconized into notification zone
+	if (!::IsWindowVisible(_pPublicInterface->getHSelf()))
+	{
+		::ShowWindow(_pPublicInterface->getHSelf(), SW_SHOW);
+
+		// Send sizing info to make window fit (specially to show tool bar.)
+		::SendMessage(_pPublicInterface->getHSelf(), WM_SIZE, 0, 0);
+	}
+
+	if (!isMulti)
+	{
+		generic_string title, msg;
+
+		if (!_nativeLangSpeaker.getDoSaveOrNotStrings(title, msg))
+		{
+			title = TEXT("Save");
+			msg = TEXT("Save file \"$STR_REPLACE$\" ?");
+		}
+
+		msg = stringReplace(msg, TEXT("$STR_REPLACE$"), fn);
+
+		return ::MessageBox(_pPublicInterface->getHSelf(), msg.c_str(), title.c_str(), MB_YESNOCANCEL | MB_ICONQUESTION | MB_APPLMODAL);
+	}
+
 	DoSaveOrNotBox doSaveOrNotBox;
 	doSaveOrNotBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), fn, isMulti);
 	doSaveOrNotBox.doDialog(_nativeLangSpeaker.isRTL());
@@ -2005,10 +2038,10 @@ void Notepad_plus::checkDocState()
 
 	enableCommand(IDM_FILE_OPEN_DEFAULT_VIEWER, isAssoCommandExisting(curBuf->getFullPathName()), MENU);
 
-	enableCommand(IDM_VIEW_IN_FIREFOX, isAssoCommandExisting(curBuf->getFullPathName()), MENU);
-	enableCommand(IDM_VIEW_IN_CHROME, isAssoCommandExisting(curBuf->getFullPathName()), MENU);
-	enableCommand(IDM_VIEW_IN_IE, isAssoCommandExisting(curBuf->getFullPathName()), MENU);
-	enableCommand(IDM_VIEW_IN_EDGE, isAssoCommandExisting(curBuf->getFullPathName()), MENU);
+	enableCommand(IDM_VIEW_IN_FIREFOX, isFileExisting, MENU);
+	enableCommand(IDM_VIEW_IN_CHROME, isFileExisting, MENU);
+	enableCommand(IDM_VIEW_IN_IE, isFileExisting, MENU);
+	enableCommand(IDM_VIEW_IN_EDGE, isFileExisting, MENU);
 
 	enableConvertMenuItems(curBuf->getEolFormat());
 	checkUnicodeMenuItems();
@@ -2603,7 +2636,7 @@ void Notepad_plus::maintainIndentation(TCHAR ch)
 		return;
 
 	if (type == L_C || type == L_CPP || type == L_JAVA || type == L_CS || type == L_OBJC ||
-		type == L_PHP || type == L_JS || type == L_JAVASCRIPT || type == L_JSP || type == L_CSS)
+		type == L_PHP || type == L_JS || type == L_JAVASCRIPT || type == L_JSP || type == L_CSS || type == L_PERL || type == L_RUST)
 	{
 		if (((eolMode == SC_EOL_CRLF || eolMode == SC_EOL_LF) && ch == '\n') ||
 			(eolMode == SC_EOL_CR && ch == '\r'))
@@ -2642,6 +2675,11 @@ void Notepad_plus::maintainIndentation(TCHAR ch)
 				_pEditView->setLineIndent(curLine, indentAmountPrevLine + tabWidth);
 			}
 			else if (nextChar == '{')
+			{
+				_pEditView->setLineIndent(curLine, indentAmountPrevLine);
+			}
+			// These languages do no support single line control structures without braces.
+			else if (type == L_PERL || type == L_RUST)
 			{
 				_pEditView->setLineIndent(curLine, indentAmountPrevLine);
 			}
@@ -2796,7 +2834,7 @@ void Notepad_plus::setLanguage(LangType langType)
 	if (reset)
 	{
 		_subEditView.execute(SCI_SETDOCPOINTER, 0, prev);
-		_subEditView.restoreCurrentPos();
+		_subEditView.restoreCurrentPosPreStep();
 	}
 };
 
@@ -2970,11 +3008,14 @@ LangType Notepad_plus::menuID2LangType(int cmdID)
             return L_VISUALPROLOG;
 		case IDM_LANG_USER :
             return L_USER;
-		default: {
-			if (cmdID >= IDM_LANG_USER && cmdID <= IDM_LANG_USER_LIMIT) {
+		default:
+		{
+			if (cmdID >= IDM_LANG_USER && cmdID <= IDM_LANG_USER_LIMIT)
+			{
 				return L_USER;
 			}
-			break; }
+			break; 
+		}
 	}
 	return L_EXTERNAL;
 }
@@ -3347,17 +3388,23 @@ void Notepad_plus::showView(int whichOne)
 	if (viewVisible(whichOne))	//no use making visible view visible
 		return;
 
-	if (_mainWindowStatus & WindowUserActive) {
+	if (_mainWindowStatus & WindowUserActive)
+	{
 		 _pMainSplitter->setWin0(&_subSplitter);
 		 _pMainWindow = _pMainSplitter;
-	} else {
+	}
+	else
+	{
 		_pMainWindow = &_subSplitter;
 	}
 
-	if (whichOne == MAIN_VIEW) {
+	if (whichOne == MAIN_VIEW)
+	{
 		_mainEditView.display(true);
 		_mainDocTab.display(true);
-	} else if (whichOne == SUB_VIEW) {
+	}
+	else if (whichOne == SUB_VIEW)
+	{
 		_subEditView.display(true);
 		_subDocTab.display(true);
 	}
@@ -3369,7 +3416,8 @@ void Notepad_plus::showView(int whichOne)
 	::SendMessage(_pPublicInterface->getHSelf(), WM_SIZE, 0, 0);
 }
 
-bool Notepad_plus::viewVisible(int whichOne) {
+bool Notepad_plus::viewVisible(int whichOne)
+{
 	int viewToCheck = (whichOne == SUB_VIEW?WindowSubActive:WindowMainActive);
 	return (_mainWindowStatus & viewToCheck) != 0;
 }
@@ -3397,10 +3445,13 @@ void Notepad_plus::hideView(int whichOne)
 
 	_subSplitter.display(false);	//hide splitter
 	//hide scintilla and doctab
-	if (whichOne == MAIN_VIEW) {
+	if (whichOne == MAIN_VIEW)
+	{
 		_mainEditView.display(false);
 		_mainDocTab.display(false);
-	} else if (whichOne == SUB_VIEW) {
+	}
+	else if (whichOne == SUB_VIEW)
+	{
 		_subEditView.display(false);
 		_subDocTab.display(false);
 	}
@@ -3524,6 +3575,23 @@ bool Notepad_plus::removeBufferFromView(BufferID id, int whichOne)
 			{
 				toActivate = active;    //activate the 'active' index. Since we remove the tab first, the indices shift (on the right side)
 			}
+
+			if (NppParameters::getInstance().getNppGUI()._styleMRU)
+			{
+				// After closing a file choose the file to activate based on MRU list and not just last file in the list.
+				TaskListInfo taskListInfo;
+				::SendMessage(_pPublicInterface->getHSelf(), WM_GETTASKLISTINFO, reinterpret_cast<WPARAM>(&taskListInfo), 0);
+				size_t i, n = taskListInfo._tlfsLst.size();
+				for (i = 0; i < n; i++)
+				{
+					TaskLstFnStatus& tfs = taskListInfo._tlfsLst[i];
+					if (tfs._iView != whichOne || tfs._bufID == id)
+						continue;
+					toActivate = tfs._docIndex >= active ? tfs._docIndex - 1 : tfs._docIndex;
+					break;
+				}
+			}
+
 			tabToClose->deletItemAt((size_t)index); //delete first
 			_isFolding = true; // So we can ignore events while folding is taking place
 			activateBuffer(tabToClose->getBufferByIndex(toActivate), whichOne);     //then activate. The prevent jumpy tab behaviour
@@ -3541,10 +3609,13 @@ bool Notepad_plus::removeBufferFromView(BufferID id, int whichOne)
 
 int Notepad_plus::switchEditViewTo(int gid)
 {
-	if (currentView() == gid) {	//make sure focus is ok, then leave
+	if (currentView() == gid)
+	{
+		//make sure focus is ok, then leave
 		_pEditView->getFocus();	//set the focus
 		return gid;
 	}
+
 	if (!viewVisible(gid))
 		return currentView();	//cannot activate invisible view
 
@@ -3633,13 +3704,16 @@ void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
 	command += TEXT("\"");
 	command += TEXT(" \"$(FULL_CURRENT_PATH)\" -multiInst -nosession");
 
-	if (x) {
+	if (x)
+	{
 		TCHAR pX[10];
 		generic_itoa(x, pX, 10);
 		command += TEXT(" -x");
 		command += pX;
 	}
-	if (y) {
+
+	if (y)
+	{
 		TCHAR pY[10];
 		generic_itoa(y, pY, 10);
 		command += TEXT(" -y");
@@ -3714,7 +3788,7 @@ void Notepad_plus::docGotoAnotherEditView(FileTransferMode mode)
 		Buffer *buf = MainFileManager.getBufferByID(current);
 		_pEditView->saveCurrentPos();	//allow copying of position
 		buf->setPosition(buf->getPosition(_pEditView), _pNonEditView);
-		_pNonEditView->restoreCurrentPos();	//set position
+		_pNonEditView->restoreCurrentPosPreStep();	//set position
 		activateBuffer(current, viewToGo);
 	}
 
@@ -3801,15 +3875,19 @@ bool Notepad_plus::activateBuffer(BufferID id, int whichOne)
 	return true;
 }
 
-void Notepad_plus::performPostReload(int whichOne) {
+void Notepad_plus::performPostReload(int whichOne)
+{
 	NppParameters& nppParam = NppParameters::getInstance();
 	const NppGUI & nppGUI = nppParam.getNppGUI();
 	bool toEnd = (nppGUI._fileAutoDetection & cdGo2end) ? true : false;
 	if (!toEnd)
 		return;
-	if (whichOne == MAIN_VIEW) {
+	if (whichOne == MAIN_VIEW)
+	{
 		_mainEditView.execute(SCI_GOTOLINE, _mainEditView.execute(SCI_GETLINECOUNT) -1);
-	} else {
+	}
+	else
+	{
 		_subEditView.execute(SCI_GOTOLINE, _subEditView.execute(SCI_GETLINECOUNT) -1);
 	}
 }
@@ -4311,7 +4389,8 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
     _pEditView->execute(SCI_ENDUNDOACTION);
 
 	// undoStreamComment: If there were no block-comments to un-comment try uncommenting of stream-comment.
-	if ((currCommentMode == cm_uncomment) && (nUncomments == 0)) {
+	if ((currCommentMode == cm_uncomment) && (nUncomments == 0))
+	{
 		return undoStreamComment(false);
 	}
     return true;
@@ -4359,7 +4438,8 @@ bool Notepad_plus::doStreamComment()
 	}
 
 	// BlockToStreamComment: If there is no stream-comment symbol, try the block comment:
-	if ((!commentStart) || (!commentStart[0]) || (commentStart == NULL) || (!commentEnd) || (!commentEnd[0]) || (commentEnd == NULL)) {
+	if ((!commentStart) || (!commentStart[0]) || (commentStart == NULL) || (!commentEnd) || (!commentEnd[0]) || (commentEnd == NULL))
+	{
 		if (!(!commentLineSymbol || !commentLineSymbol[0] || commentLineSymbol == NULL))
 			return doBlockComment(cm_comment);
 		else
@@ -4670,7 +4750,9 @@ void Notepad_plus::fullScreenToggle()
 		if (!_beforeSpecialView.isPostIt)
 		{
 			_beforeSpecialView.preStyle = ::SetWindowLongPtr(_pPublicInterface->getHSelf(), GWL_STYLE, WS_POPUP);
-			if (!_beforeSpecialView.preStyle) {	//something went wrong, use default settings
+			if (!_beforeSpecialView.preStyle)
+			{
+				//something went wrong, use default settings
 				_beforeSpecialView.preStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
 			}
 		}
@@ -4805,7 +4887,9 @@ void Notepad_plus::postItToggle()
 			//Hide window so windows can properly update it
 			::ShowWindow(_pPublicInterface->getHSelf(), SW_HIDE);
 			_beforeSpecialView.preStyle = ::SetWindowLongPtr( _pPublicInterface->getHSelf(), GWL_STYLE, WS_POPUP );
-			if (!_beforeSpecialView.preStyle) {	//something went wrong, use default settings
+			if (!_beforeSpecialView.preStyle)
+			{
+				//something went wrong, use default settings
 				_beforeSpecialView.preStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
 			}
 			//Redraw the window and refresh windowmanager cache, dont do anything else, sizing is done later on
@@ -5041,7 +5125,8 @@ bool Notepad_plus::emergency(const generic_string& emergencySavedDir)
 	return dumpFiles(emergencySavedDir.c_str(), TEXT("File"));
 }
 
-bool Notepad_plus::dumpFiles(const TCHAR * outdir, const TCHAR * fileprefix) {
+bool Notepad_plus::dumpFiles(const TCHAR * outdir, const TCHAR * fileprefix)
+{
 	//start dumping unsaved files to recovery directory
 	bool somethingsaved = false;
 	bool somedirty = false;
@@ -6354,6 +6439,7 @@ static const QuoteParams quotes[] =
 	{TEXT("Anonymous #159"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("I love anal\n-yzing all data before making assumptions.")},
 	{TEXT("Anonymous #160"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("So I took off her shirt. Then she said,\n\"Take off my shirt.\"\nI took off her shirt.\n\"Take off my shoes.\"\nI took off her shoes.\n\"Now take off my bra and panties.\"\nand so I took them off.\nThen she looked at me and said\n\"I don't want to catch you wearing my things ever again.\"")},
 	{TEXT("Anonymous #161"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Do you know:\nSpiders are the only web developers in the world that enjoy finding bugs.") },
+	{TEXT("Anonymous #162"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Psychologist: Lie down please.\n8: No, thank you.If I do, this session will never reach the end.") },
 	{TEXT("OOP"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("If you want to treat women as objects,\ndo it with class.")},
 	{TEXT("Internet #1"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("If you spell \"Nothing\" backwards, it becomes \"Gnihton\" which also means nothing.")},
 	{TEXT("Internet #404"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Quote not Found")},
@@ -6377,6 +6463,7 @@ static const QuoteParams quotes[] =
 	{TEXT("Elie Wiesel"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Human beings can be beautiful or more beautiful,\nthey can be fat or skinny, they can be right or wrong,\nbut illegal? How can a human being be illegal?")},
 	{TEXT("Dennis Ritchie"), QuoteParams::rapid, true, SC_CP_UTF8, L_TEXT, TEXT("Empty your memory, with a free(), like a pointer.\nIf you cast a pointer to a integer, it becomes the integer.\nIf you cast a pointer to a struct, it becomes the struct.\nThe pointer can crash, and can overflow.\nBe a pointer my friend.")},
 	{TEXT("Chewbacca"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("Uuuuuuuuuur Ahhhhrrrrrr\nUhrrrr Ahhhhrrrrrr\nAaaarhg...")},
+	{TEXT("Alexandria Ocasio-Cortez"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("No one ever makes a billion dollars.\nYou TAKE a billion dollars.")},
 	{TEXT("Space Invaders"), QuoteParams::speedOfLight, false, SC_CP_UTF8, L_TEXT, TEXT("\n\n       ▄██▄\n     ▄██████▄           █   █  █▀▀▀\n     ██▄██▄██           █   █  █▄▄\n      ▄▀▄▄▀▄            █ █ █  █\n     ▀ ▀  ▀ ▀           ▀▀ ▀▀  ▀▀▀▀\n\n      ▀▄   ▄▀           ▄█▀▀▀  ▄█▀▀█▄  █▀▄▀█  █▀▀▀\n     ▄█▀███▀█▄          █      █    █  █ ▀ █  █▄▄\n    █ █▀▀▀▀▀█ █         █▄     █▄  ▄█  █   █  █\n       ▀▀ ▀▀             ▀▀▀▀   ▀▀▀▀   ▀   ▀  ▀▀▀▀\n\n     ▄▄█████▄▄          ▀█▀  █▀▄  █\n    ██▀▀███▀▀██          █   █ ▀▄ █\n    ▀▀██▀▀▀██▀▀          █   █  ▀▄█\n    ▄█▀ ▀▀▀ ▀█▄         ▀▀▀  ▀   ▀▀\n\n      ▄▄████▄▄          █▀▀█  █▀▀▀  ▄▀▀▄  ▄█▀▀▀  █▀▀▀\n    ▄██████████▄        █▄▄█  █▄▄   █▄▄█  █      █▄▄ \n  ▄██▄██▄██▄██▄██▄      █     █     █  █  █▄     █   \n    ▀█▀  ▀▀  ▀█▀        ▀     ▀▀▀▀  ▀  ▀   ▀▀▀▀  ▀▀▀▀\n\n") },
 	{TEXT("#JeSuisCharlie"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Freedom of expression is like the air we breathe, we don't feel it, until people take it away from us.\n\nFor this reason, Je suis Charlie, not because I endorse everything they published, but because I cherish the right to speak out freely without risk even when it offends others.\nAnd no, you cannot just take someone's life for whatever he/she expressed.\n\nHence this \"Je suis Charlie\" edition.\n")}
 };
@@ -6819,7 +6906,8 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 
 
 	// BlockToStreamComment: If there is no stream-comment symbol and we came not from doBlockComment, try the block comment:
-	if ((!commentStart) || (!commentStart[0]) || (commentStart == NULL) || (!commentEnd) || (!commentEnd[0]) || (commentEnd == NULL)) {
+	if ((!commentStart) || (!commentStart[0]) || (commentStart == NULL) || (!commentEnd) || (!commentEnd[0]) || (commentEnd == NULL))
+	{
 		if (!(!commentLineSymbol || !commentLineSymbol[0] || commentLineSymbol == NULL) && tryBlockComment)
 			return doBlockComment(cm_uncomment);
 		else
