@@ -40,7 +40,7 @@
 using namespace Scintilla;
 
 // The following definitions are a copy of the ones in FindReplaceDlg.h
-enum { searchHeaderLevel = SC_FOLDLEVELBASE + 1, fileHeaderLevel, resultLevel };
+enum { searchHeaderLevel = SC_FOLDLEVELBASE, fileHeaderLevel, resultLevel };
 
 
 static inline bool AtEOL(Accessor &styler, size_t i) {
@@ -56,25 +56,21 @@ static void ColouriseSearchResultLine(SearchResultMarkings* pMarkings, char *lin
 {
 	// startLine and endPos are the absolute positions.
 
-	if (lineBuffer[0] == ' ') // file header
+	if (lineBuffer[0] == ' ') // white space - file header
 	{
 		styler.ColourTo(endPos, SCE_SEARCHRESULT_FILE_HEADER);
 	}
-	else if (lineBuffer[0] == 'S') // search header
+	else if (lineBuffer[0] == '	')// \t - line info
 	{
-		styler.ColourTo(endPos, SCE_SEARCHRESULT_SEARCH_HEADER);
-	}
-	else // line info
-	{
-		const unsigned int firstTokenLen = 4;
-		unsigned int currentPos;
+		unsigned int firstTokenLen = 0;
+		unsigned int currentPos = 0;
 
-		styler.ColourTo(startLine + firstTokenLen, SCE_SEARCHRESULT_DEFAULT);
 		
-		for (currentPos = firstTokenLen; lineBuffer[currentPos] != ':'; currentPos++)
-		{
-			// Just make currentPos mover forward
-		}
+		for (; !(lineBuffer[firstTokenLen] >= '0' && lineBuffer[firstTokenLen] <= '9'); firstTokenLen++);
+		
+		styler.ColourTo(startLine + firstTokenLen - 1, SCE_SEARCHRESULT_DEFAULT);
+
+		for (currentPos = firstTokenLen; lineBuffer[currentPos] != ':'; currentPos++);
 
 		styler.ColourTo(startLine + currentPos - 1, SCE_SEARCHRESULT_LINE_NUMBER);
 		
@@ -82,7 +78,6 @@ static void ColouriseSearchResultLine(SearchResultMarkings* pMarkings, char *lin
 
 		SearchResultMarking mi = pMarkings->_markings[linenum];
 
-		currentPos += 2; // skip ": "
 		size_t match_start = startLine + mi._start - 1;
 		size_t match_end = startLine + mi._end - 1;
 
@@ -94,6 +89,10 @@ static void ColouriseSearchResultLine(SearchResultMarkings* pMarkings, char *lin
 				currentStat = SCE_SEARCHRESULT_WORD2SEARCH;
 		}
 		styler.ColourTo(endPos, currentStat);
+	}
+	else // every character - search header
+	{
+		styler.ColourTo(endPos, SCE_SEARCHRESULT_SEARCH_HEADER);
 	}
 }
 

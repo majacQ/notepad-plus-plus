@@ -1,29 +1,18 @@
 // This file is part of Notepad++ project
-// Copyright (C)2020 Don HO <don.h@free.fr>
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either
-// version 2 of the License, or (at your option) any later version.
-//
-// Note that the GPL places important restrictions on "derived works", yet
-// it does not provide a detailed definition of that term.  To avoid      
-// misunderstandings, we consider an application to constitute a          
-// "derivative work" for the purpose of this license if it does any of the
-// following:                                                             
-// 1. Integrates source code from Notepad++.
-// 2. Integrates/includes/aggregates Notepad++ into a proprietary executable
-//    installer, such as those produced by InstallShield.
-// 3. Links to a library or executes a program that does any of the above.
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "documentMap.h"
@@ -97,7 +86,7 @@ bool DocumentMap::needToRecomputeWith(const ScintillaEditView *editView)
 	if (_displayZoom != currentZoom)
 		return true;
 
-	int currentTextZoneWidth = getEditorTextZoneWidth(editView);
+	int currentTextZoneWidth = pEditView->getTextZoneWidth();
 	if (_displayWidth != currentTextZoneWidth)
 		return true;
 
@@ -174,7 +163,7 @@ void DocumentMap::wrapMap(const ScintillaEditView *editView)
 	if (pEditView->isWrap())
 	{
 		// get current scintilla width W1
-		int editZoneWidth = getEditorTextZoneWidth(editView);
+		int editZoneWidth = pEditView->getTextZoneWidth();
 
 		// update the wrap needed data
 		_displayWidth = editZoneWidth;
@@ -190,80 +179,50 @@ void DocumentMap::wrapMap(const ScintillaEditView *editView)
 		// sync wrapping indent mode
 		_pMapView->execute(SCI_SETWRAPINDENTMODE, pEditView->execute(SCI_GETWRAPINDENTMODE));
 
+		const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
+
+		if (svp._paddingLeft || svp._paddingRight)
+		{
+			int paddingMapLeft = static_cast<int>(svp._paddingLeft / (editZoneWidth / docMapWidth));
+			int paddingMapRight = static_cast<int>(svp._paddingRight / (editZoneWidth / docMapWidth));
+			_pMapView->execute(SCI_SETMARGINLEFT, 0, paddingMapLeft);
+			_pMapView->execute(SCI_SETMARGINRIGHT, 0, paddingMapRight);
+		}
 	}
-}
 
-int DocumentMap::getEditorTextZoneWidth(const ScintillaEditView *editView)
-{
-	const ScintillaEditView *pEditView = editView ? editView : *_ppEditView;
-
-	RECT editorRect;
-	pEditView->getClientRect(editorRect);
-
-	int marginWidths = 0;
-	for (int m = 0; m < 4; ++m)
-	{
-		marginWidths += static_cast<int32_t>(pEditView->execute(SCI_GETMARGINWIDTHN, m));
-	}
-	return editorRect.right - editorRect.left - marginWidths;
+	doMove();
 }
 
 void DocumentMap::scrollMap()
 {
 	if (_pMapView && _ppEditView)
 	{
-		// Visible document line for the code view (but not displayed line)
-		auto firstVisibleDisplayLine = (*_ppEditView)->execute(SCI_GETFIRSTVISIBLELINE);
-		const auto firstVisibleDocLine = (*_ppEditView)->execute(SCI_DOCLINEFROMVISIBLE, firstVisibleDisplayLine);
-		const auto nbLine = (*_ppEditView)->execute(SCI_LINESONSCREEN, firstVisibleDisplayLine);
-		const auto lastVisibleDocLine = (*_ppEditView)->execute(SCI_DOCLINEFROMVISIBLE, firstVisibleDisplayLine + nbLine);
+		// Get the position of the 1st and last showing chars from the original edit view
+		RECT rcEditView;
+		(*_ppEditView)->getClientRect(rcEditView);
+		LRESULT higherPos = (*_ppEditView)->execute(SCI_POSITIONFROMPOINT, 0, 0);
+		LRESULT lowerPos = (*_ppEditView)->execute(SCI_POSITIONFROMPOINT, rcEditView.right - rcEditView.left, rcEditView.bottom - rcEditView.top);
 
-		// Visible document line for the map view
-		auto firstVisibleDisplayLineMap = _pMapView->execute(SCI_GETFIRSTVISIBLELINE);
-		auto firstVisibleDocLineMap = _pMapView->execute(SCI_DOCLINEFROMVISIBLE, firstVisibleDisplayLineMap);
-		auto nbLineMap = _pMapView->execute(SCI_LINESONSCREEN, firstVisibleDocLineMap);
-		auto lastVisibleDocLineMap = _pMapView->execute(SCI_DOCLINEFROMVISIBLE, firstVisibleDisplayLineMap + nbLineMap);
+		// Let Scintilla scroll the map
+		_pMapView->execute(SCI_GOTOPOS, higherPos);
+		_pMapView->execute(SCI_GOTOPOS, lowerPos);
 
-		// If part of editor view is out of map, then scroll map
-		LRESULT mapLineToScroll = 0;
-		if (lastVisibleDocLineMap < lastVisibleDocLine)
-			mapLineToScroll = lastVisibleDocLine;
-		else
-			mapLineToScroll = firstVisibleDocLine;
-		//
-		// Scroll to make whole view zone visible
-		//
-		_pMapView->execute(SCI_GOTOLINE, mapLineToScroll);
+		// Get top position of orange marker window
+		RECT rcMapView;
+		_pMapView->getClientRect(rcMapView);
+		LRESULT higherY = _pMapView->execute(SCI_POINTYFROMPOSITION, 0, higherPos);
 
-		// Get the editor's higher/lower Y, then compute the map's higher/lower Y
-		LRESULT higherY = 0;
+		// Get bottom position of orange marker window
 		LRESULT lowerY = 0;
-		LRESULT higherPos = -1 ; // -1 => not (*_ppEditView)->isWrap()
-		if (not (*_ppEditView)->isWrap())
-		{
-			higherPos = _pMapView->execute(SCI_POSITIONFROMLINE, firstVisibleDocLine);
-			auto lowerPos = _pMapView->execute(SCI_POSITIONFROMLINE, lastVisibleDocLine);
-			higherY = _pMapView->execute(SCI_POINTYFROMPOSITION, 0, higherPos);
-			lowerY = _pMapView->execute(SCI_POINTYFROMPOSITION, 0, lowerPos);
-			if (lowerY == 0)
-			{
-				auto lineHeight = _pMapView->execute(SCI_TEXTHEIGHT, firstVisibleDocLine);
-				lowerY = nbLine * lineHeight + higherY;
-			}
+		LRESULT lineHeightMapView  = _pMapView->execute(SCI_TEXTHEIGHT, 0);
+		if (!(*_ppEditView)->isWrap())
+		{ // not wrapped: mimic height of edit view
+			LRESULT lineHeightEditView = (*_ppEditView)->execute(SCI_TEXTHEIGHT, 0);
+			lowerY = higherY + lineHeightMapView * (rcEditView.bottom - rcEditView.top) / lineHeightEditView;
 		}
 		else
-		{
-			// Get the position of the 1st showing char from the original edit view
-			higherPos = (*_ppEditView)->execute(SCI_POSITIONFROMPOINT, 0, 0);
-
-			// Get the map higher Y point from the position in map
-			higherY = _pMapView->execute(SCI_POINTYFROMPOSITION, 0, static_cast<int32_t>(higherPos));
-
-			// Get line height
-			auto lineHeight = _pMapView->execute(SCI_TEXTHEIGHT, firstVisibleDocLine);
-
-			// Get the map lower Y point
-			lowerY = nbLine * lineHeight + higherY;
+		{ // wrapped: ask Scintilla, since in the map view the current range of edit view might be wrapped differently
+			lowerY = _pMapView->execute(SCI_POINTYFROMPOSITION, 0, lowerPos) + lineHeightMapView;
 		}
 
 		//
@@ -297,7 +256,7 @@ void DocumentMap::scrollMapWith(const MapPosition & mapPos)
 		// Get the editor's higher/lower Y, then compute the map's higher/lower Y
 		LRESULT higherY = 0;
 		LRESULT lowerY = 0;
-		if (not mapPos._isWrap)
+		if (!mapPos._isWrap)
 		{
 			auto higherPos = _pMapView->execute(SCI_POSITIONFROMLINE, mapPos._firstVisibleDocLine);
 			auto lowerPos = _pMapView->execute(SCI_POSITIONFROMLINE, mapPos._lastVisibleDocLine);
@@ -326,10 +285,10 @@ void DocumentMap::scrollMapWith(const MapPosition & mapPos)
 void DocumentMap::doMove()
 {
 	RECT rc;
-	POINT pt = {0,0};
-	::ClientToScreen(_hSelf, &pt);
-	getClientRect(rc);
-	::MoveWindow(_vzDlg.getHSelf(), pt.x, pt.y, (rc.right - rc.left), (rc.bottom - rc.top), TRUE);
+	::GetClientRect (_hwndScintilla, & rc);
+	bool isChild = (::GetWindowLongPtr (_vzDlg.getHSelf(), GWL_STYLE) & WS_CHILD) != 0;
+	::MapWindowPoints (_hwndScintilla, isChild ? _pMapView->getHParent() : HWND_DESKTOP, reinterpret_cast<POINT*>(& rc), 2);
+	::MoveWindow(_vzDlg.getHSelf(), rc.left, rc.top, (rc.right - rc.left), (rc.bottom - rc.top), TRUE);
 }
 
 void DocumentMap::fold(size_t line, bool foldOrNot)
@@ -364,8 +323,8 @@ INT_PTR CALLBACK DocumentMap::run_dlgProc(UINT message, WPARAM wParam, LPARAM lP
     {
         case WM_INITDIALOG :
         {
-			HWND hwndScintilla = reinterpret_cast<HWND>(::SendMessage(_hParent, NPPM_CREATESCINTILLAHANDLE, 0, reinterpret_cast<LPARAM>(_hSelf)));
-			_pMapView = reinterpret_cast<ScintillaEditView *>(::SendMessage(_hParent, NPPM_INTERNAL_GETSCINTEDTVIEW, 0, reinterpret_cast<LPARAM>(hwndScintilla)));
+			_hwndScintilla = reinterpret_cast<HWND>(::SendMessage(_hParent, NPPM_CREATESCINTILLAHANDLE, 0, reinterpret_cast<LPARAM>(_hSelf)));
+			_pMapView = reinterpret_cast<ScintillaEditView *>(::SendMessage(_hParent, NPPM_INTERNAL_GETSCINTEDTVIEW, 0, reinterpret_cast<LPARAM>(_hwndScintilla)));
 			_pMapView->execute(SCI_SETZOOM, static_cast<WPARAM>(-10), 0);
 			_pMapView->execute(SCI_SETVSCROLLBAR, FALSE, 0);
 			_pMapView->execute(SCI_SETHSCROLLBAR, FALSE, 0);
@@ -378,6 +337,7 @@ INT_PTR CALLBACK DocumentMap::run_dlgProc(UINT message, WPARAM wParam, LPARAM lP
 			_vzDlg.init(::GetModuleHandle(NULL), _hSelf);
 			_vzDlg.doDialog();
 			(NppParameters::getInstance()).SetTransparent(_vzDlg.getHSelf(), 50); // 0 <= transparancy < 256
+			BringWindowToTop (_vzDlg.getHSelf());
 
 			setSyntaxHiliting();
 			
@@ -398,12 +358,10 @@ INT_PTR CALLBACK DocumentMap::run_dlgProc(UINT message, WPARAM wParam, LPARAM lP
 
 				if (_vzDlg.isCreated())
 				{
-					POINT pt = {0,0};
-					::ClientToScreen(_hSelf, &pt);
 					if (!_pMapView->isWrap())
 						::MoveWindow(_pMapView->getHSelf(), 0, 0, width, height, TRUE);
-						
-					::MoveWindow(_vzDlg.getHSelf(), pt.x, pt.y, width, height, TRUE);
+					
+					doMove();
 				}
 			}
             break;
@@ -435,14 +393,7 @@ INT_PTR CALLBACK DocumentMap::run_dlgProc(UINT message, WPARAM wParam, LPARAM lP
 
 				case DMN_FLOATDROPPED:
 				{
-					RECT rc;
-					getClientRect(rc);
-					int width = rc.right - rc.left;
-					int height = rc.bottom - rc.top;
-
-					POINT pt = {0,0};
-					::ClientToScreen(_hSelf, &pt);
-					::MoveWindow(_vzDlg.getHSelf(), pt.x, pt.y, width, height, TRUE);
+					doMove();
 					scrollMap();
 					return TRUE;
 				}
@@ -512,7 +463,10 @@ void ViewZoneDlg::drawPreviewZone(DRAWITEMSTRUCT *pdis)
 void ViewZoneDlg::doDialog()
 {
 	if (!isCreated())
-		create(IDD_VIEWZONE);
+	{
+		bool win10 = (NppParameters::getInstance()).getWinVersion() >= WV_WIN10;
+		create(win10 ? IDD_VIEWZONE : IDD_VIEWZONE_CLASSIC);
+	}
 	display();
 };
 

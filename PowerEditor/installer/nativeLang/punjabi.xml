@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!--
-***********************************************************************************
-	Punjabi language binary translations file for Notepad++ ::
-
-	Created By:- Vipul Y. Tailor
-	Email id- vipul.tailor@hotmail.com
-************************************************************************************
-	
--->
-
 <NotepadPlus>
     <Native-Langue name="ਪੰਜਾਬੀ ਦੇ" filename="punjabi.xml" version="6.8.2">
         <Menu>
@@ -290,7 +280,6 @@
                     <Item id="47002" name="ਨੋਟਪੈਡ ++ ਪ੍ਰੋਜੈਕਟ ਪੰਨਾ"/>
                     <Item id="47003" name="ਆਨਲਾਈਨ ਦਸਤਾਵੇਜ਼"/>
 					<Item id="47004" name="ਨੋਟਪੈਡ ++ ਕਮਿਊਨਿਟੀ (ਫੋਰਮ)"/>
-                    <Item id="47011" name="ਲਾਈਵ ਸਹਿਯੋਗ"/>
                     <Item id="47005" name="ਹੋਰ ਪਲੱਗਇਨ ਲਵੋ"/>
                     <Item id="47006" name="ਅੱਪਡੇਟ ਨੋਟਪੈਡ ++"/>
                     <Item id="47009" name="ਅੱਪਡੇਟਰ ਪਰਾਕਸੀ ਸੈੱਟ ..."/>
@@ -875,7 +864,7 @@
             <CannotMoveDoc title="Move to new Notepad++ Instance" message="Document is modified, save it then try again."/>
             <DocReloadWarning title="Reload" message="Are you sure you want to reload the current file and lose the changes made in Notepad++?"/>
             <FileLockedWarning title="Save failed" message="Please check whether if this file is opened in another program"/>
-            <FileAlreadyOpenedInNpp title="" message="The file is already opened in the Notepad++."/>
+            <FileAlreadyOpenedInNpp title="" message="The file is already opened in Notepad++."/>
             <DeleteFileFailed title="Delete File" message="Delete File failed"/>
 
             <!-- $INT_REPLACE$ is a place holder, don't translate it -->

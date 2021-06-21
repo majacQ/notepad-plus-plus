@@ -1,70 +1,28 @@
-// this file is part of docking functionality for Notepad++
+// This file is part of Notepad++ project
 // Copyright (C)2006 Jens Lorenz <jens.plugin.npp@gmx.de>
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either
-// version 2 of the License, or (at your option) any later version.
-//
-// Note that the GPL places important restrictions on "derived works", yet
-// it does not provide a detailed definition of that term.  To avoid
-// misunderstandings, we consider an application to constitute a
-// "derivative work" for the purpose of this license if it does any of the
-// following:
-// 1. Integrates source code from Notepad++.
-// 2. Integrates/includes/aggregates Notepad++ into a proprietary executable
-//    installer, such as those produced by InstallShield.
-// 3. Links to a library or executes a program that does any of the above.
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 #include <stdexcept>
 #include "DockingSplitter.h"
 #include "Notepad_plus_msgs.h"
 #include "Parameters.h"
+#include "NppDarkMode.h"
 
 BOOL DockingSplitter::_isVertReg = FALSE;
 BOOL DockingSplitter::_isHoriReg = FALSE;
-
-static HWND		hWndMouse		= NULL;
-static HHOOK	hookMouse		= NULL;
-
-#ifndef WH_MOUSE_LL
-#define WH_MOUSE_LL 14
-#endif
-
-static LRESULT CALLBACK hookProcMouse(int nCode, WPARAM wParam, LPARAM lParam)
-{
-    if (nCode >= 0)
-    {
-		switch (wParam)
-		{
-			case WM_MOUSEMOVE:
-			case WM_NCMOUSEMOVE:
-				::PostMessage(hWndMouse, static_cast<UINT>(wParam), 0, 0);
-				break;
-
-			case WM_LBUTTONUP:
-			case WM_NCLBUTTONUP:
-				::PostMessage(hWndMouse, static_cast<UINT>(wParam), 0, 0);
-				return TRUE;
-
-			default:
-				break;
-		}
-	}
-
-	return ::CallNextHookEx(hookMouse, nCode, wParam, lParam);
-}
 
 void DockingSplitter::init(HINSTANCE hInst, HWND hWnd, HWND hMessage, UINT flags)
 {
@@ -152,34 +110,15 @@ LRESULT DockingSplitter::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	{
 		case WM_LBUTTONDOWN:
 		{
-			hWndMouse = hwnd;
-			hookMouse = ::SetWindowsHookEx(WH_MOUSE_LL, hookProcMouse, _hInst, 0);
-			if (!hookMouse)
-			{
-				DWORD dwError = ::GetLastError();
-				TCHAR  str[128];
-				::wsprintf(str, TEXT("GetLastError() returned %lu"), dwError);
-				::MessageBox(NULL, str, TEXT("SetWindowsHookEx(MOUSE) failed on runProc"), MB_OK | MB_ICONERROR);
-			}
-			else
-			{
-				::SetCapture(_hSelf);
-				::GetCursorPos(&_ptOldPos);
-				_isLeftButtonDown = TRUE;
-			}
-
+			::SetCapture(_hSelf);
+			::GetCursorPos(&_ptOldPos);
+			_isLeftButtonDown = TRUE;
 			break;
 		}
 		case WM_LBUTTONUP:
 		case WM_NCLBUTTONUP:
 		{
-			/* end hooking */
-			if (hookMouse)
-			{
-				::UnhookWindowsHookEx(hookMouse);
-				::ReleaseCapture();
-				hookMouse = NULL;
-			}
+			::ReleaseCapture();
 			_isLeftButtonDown = FALSE;
 			break;
 		}
@@ -203,6 +142,20 @@ LRESULT DockingSplitter::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 				_ptOldPos = pt;
 			}
 			break;
+		}
+		case WM_ERASEBKGND:
+		{
+			if (!NppDarkMode::isEnabled())
+			{
+				break;
+			}
+
+			RECT rc = { 0 };
+			getClientRect(rc);
+
+			FillRect((HDC)wParam, &rc, NppDarkMode::getSofterBackgroundBrush());
+
+			return 1;
 		}
 		default :
 			break;

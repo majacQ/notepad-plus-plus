@@ -1,29 +1,18 @@
 // This file is part of Notepad++ project
-// Copyright (C)2020 Don HO <don.h@free.fr>
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either
-// version 2 of the License, or (at your option) any later version.
-//
-// Note that the GPL places important restrictions on "derived works", yet
-// it does not provide a detailed definition of that term.  To avoid      
-// misunderstandings, we consider an application to constitute a          
-// "derivative work" for the purpose of this license if it does any of the
-// following:                                                             
-// 1. Integrates source code from Notepad++.
-// 2. Integrates/includes/aggregates Notepad++ into a proprietary executable
-//    installer, such as those produced by InstallShield.
-// 3. Links to a library or executes a program that does any of the above.
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 #include <memory>
@@ -168,12 +157,12 @@ generic_string Shortcut::toString() const
 	return sc;
 }
 
-void Shortcut::setName(const TCHAR * name)
+void Shortcut::setName(const TCHAR * menuName, const TCHAR * shortcutName)
 {
-	lstrcpyn(_menuName, name, nameLenMax);
-	lstrcpyn(_name, name, nameLenMax);
+	lstrcpyn(_menuName, menuName, nameLenMax);
+	TCHAR const * name = shortcutName ? shortcutName : menuName;
 	int i = 0, j = 0;
-	while (name[j] != 0 && i < nameLenMax)
+	while (name[j] != 0 && i < (nameLenMax-1))
 	{
 		if (name[j] != '&')
 		{
@@ -386,7 +375,7 @@ INT_PTR CALLBACK Shortcut::run_dlgProc(UINT Message, WPARAM wParam, LPARAM)
 	{
 		case WM_INITDIALOG :
 		{
-			::SetDlgItemText(_hSelf, IDC_NAME_EDIT, getMenuName());	//display the menu name, with ampersands
+			::SetDlgItemText(_hSelf, IDC_NAME_EDIT, _canModifyName ? getMenuName() : getName());	//display the menu name, with ampersands, for macros
 			if (!_canModifyName)
 				::SendDlgItemMessage(_hSelf, IDC_NAME_EDIT, EM_SETREADONLY, TRUE, 0);
 			auto textlen = ::SendDlgItemMessage(_hSelf, IDC_NAME_EDIT, WM_GETTEXTLENGTH, 0, 0);
@@ -811,6 +800,8 @@ bool recordedMacroStep::isMacroable() const
 		case SCI_SCROLLTOSTART:
 		case SCI_SCROLLTOEND:
 		case SCI_SETVIRTUALSPACEOPTIONS:
+		case SCI_SETCARETLINEBACKALPHA:
+		case SCI_NEWLINE:
 		{
 			if (_macroType == mtUseLParameter)
 				return true;
@@ -818,9 +809,7 @@ bool recordedMacroStep::isMacroable() const
 				return false;
 		}
 
-		// Filter out all others like display changes. Also, newlines are redundant
-		// with char insert messages.
-		case SCI_NEWLINE:
+		// Filter out all others like display changes.
 		default:
 			return false;
 	}
@@ -1138,6 +1127,7 @@ INT_PTR CALLBACK ScintillaKeyMap::run_dlgProc(UINT Message, WPARAM wParam, LPARA
 
 CommandShortcut::CommandShortcut(const Shortcut& sc, long id) :	Shortcut(sc), _id(id)
 {
+	_shortcutName = sc.getName();
 	if ( _id < IDM_EDIT)
 		_category = TEXT("File");
 	else if ( _id < IDM_SEARCH)

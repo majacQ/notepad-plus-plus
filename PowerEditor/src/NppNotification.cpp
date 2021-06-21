@@ -1,29 +1,18 @@
 // This file is part of Notepad++ project
-// Copyright (C)2020 Don HO <don.h@free.fr>
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either
-// version 2 of the License, or (at your option) any later version.
-//
-// Note that the GPL places important restrictions on "derived works", yet
-// it does not provide a detailed definition of that term.  To avoid
-// misunderstandings, we consider an application to constitute a
-// "derivative work" for the purpose of this license if it does any of the
-// following:
-// 1. Integrates source code from Notepad++.
-// 2. Integrates/includes/aggregates Notepad++ into a proprietary executable
-//    installer, such as those produced by InstallShield.
-// 3. Links to a library or executes a program that does any of the above.
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 
@@ -57,7 +46,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 	{
 		case SCN_MODIFIED:
 		{
-			if (not notifyView)
+			if (!notifyView)
 				return FALSE;
 
 			static bool prevWasEdit = false;
@@ -88,6 +77,10 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				prevWasEdit = false;
 			}
 
+			if (notification->modificationType & SC_MOD_CHANGEINDICATOR)
+			{
+				::InvalidateRect(notifyView->getHSelf(), NULL, FALSE);
+			}
 			break;
 		}
 
@@ -527,6 +520,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				itemUnitArray.push_back(MenuItemUnit(0, NULL));
 				itemUnitArray.push_back(MenuItemUnit(IDM_FILE_OPEN_FOLDER, TEXT("Open Containing Folder in Explorer")));
 				itemUnitArray.push_back(MenuItemUnit(IDM_FILE_OPEN_CMD, TEXT("Open Containing Folder in cmd")));
+				itemUnitArray.push_back(MenuItemUnit(IDM_FILE_CONTAININGFOLDERASWORKSPACE, TEXT("Open Containing Folder as Workspace")));
 				itemUnitArray.push_back(MenuItemUnit(0, NULL));
 				itemUnitArray.push_back(MenuItemUnit(IDM_FILE_OPEN_DEFAULT_VIEWER, TEXT("Open in Default Viewer")));
 				itemUnitArray.push_back(MenuItemUnit(0, NULL));
@@ -555,7 +549,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			_tabPopupMenu.checkItem(IDM_EDIT_SETREADONLY, isUserReadOnly);
 
 			bool isSysReadOnly = buf->getFileReadOnly();
-			_tabPopupMenu.enableItem(IDM_EDIT_SETREADONLY, not isSysReadOnly && not buf->isMonitoringOn());
+			_tabPopupMenu.enableItem(IDM_EDIT_SETREADONLY, !isSysReadOnly && !buf->isMonitoringOn());
 			_tabPopupMenu.enableItem(IDM_EDIT_CLEARREADONLY, isSysReadOnly);
 
 			bool isFileExisting = PathFileExists(buf->getFullPathName()) != FALSE;
@@ -603,6 +597,31 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			break;
 		}
 
+		case SCN_MARGINRIGHTCLICK:
+		{
+			if (notification->nmhdr.hwndFrom == _mainEditView.getHSelf())
+				switchEditViewTo(MAIN_VIEW);
+			else if (notification->nmhdr.hwndFrom == _subEditView.getHSelf())
+				switchEditViewTo(SUB_VIEW);
+
+			if ((notification->margin == ScintillaEditView::_SC_MARGE_SYBOLE) && !notification->modifiers)
+			{
+				POINT p;
+				::GetCursorPos(&p);
+				MenuPosition& menuPos = getMenuPosition("search-bookmark");
+				HMENU hSearchMenu = ::GetSubMenu(_mainMenuHandle, menuPos._x);
+				if (hSearchMenu)
+				{
+					HMENU hBookmarkMenu = ::GetSubMenu(hSearchMenu, menuPos._y);
+					if (hBookmarkMenu)
+					{
+						TrackPopupMenu(hBookmarkMenu, 0, p.x, p.y, 0, _pPublicInterface->getHSelf(), NULL);
+					}
+				}
+			}
+			break;
+		}
+
 		case SCN_FOLDINGSTATECHANGED :
 		{
 			if ((notification->nmhdr.hwndFrom == _mainEditView.getHSelf()) || (notification->nmhdr.hwndFrom == _subEditView.getHSelf()))
@@ -611,9 +630,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 
 				if (!_isFolding)
 				{
-					int urlAction = (NppParameters::getInstance()).getNppGUI()._styleURL;
-					if ((urlAction == 1) || (urlAction == 2))
-						addHotSpot();
+					addHotSpot();
 				}
 
 				if (_pDocMap)
@@ -642,7 +659,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 
 		case SCN_DOUBLECLICK:
 		{
-			if (not notifyView)
+			if (!notifyView)
 				return FALSE;
 
 			if (notification->modifiers == SCMOD_CTRL)
@@ -789,24 +806,45 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 					}
 				}
 			}
+			else
+			{ // Double click with no modifiers
+				// Check wether cursor is within URL
+				auto indicMsk = notifyView->execute(SCI_INDICATORALLONFOR, notification->position);
+				if (!(indicMsk & (1 << URL_INDIC)))
+					break;
+				
+				auto startPos = notifyView->execute(SCI_INDICATORSTART, URL_INDIC, notification->position);
+				auto endPos = notifyView->execute(SCI_INDICATOREND, URL_INDIC, notification->position);
+				if ((notification->position < startPos) || (notification->position > endPos))
+					break;
 
+				// WM_LBUTTONUP goes to opening browser instead of Scintilla here, because the mouse is not captured.
+				// The missing message causes mouse cursor flicker as soon as the mouse cursor is moved to a position outside the text editing area.
+				::PostMessage(notifyView->getHSelf(), WM_LBUTTONUP, 0, 0);
+
+				// Revert selection of current word. Best to this early, otherwise the
+				// selected word is visible all the time while the browser is starting
+				notifyView->execute(SCI_SETSEL, notification->position, notification->position); 
+
+				// Open URL
+				generic_string url = notifyView->getGenericTextAsString(static_cast<size_t>(startPos), static_cast<size_t>(endPos));
+				::ShellExecute(_pPublicInterface->getHSelf(), TEXT("open"), url.c_str(), NULL, NULL, SW_SHOW);
+			}
 			break;
 		}
 
 		case SCN_UPDATEUI:
 		{
-			if (not notifyView)
+			if (!notifyView)
 				return FALSE;
 
 			NppParameters& nppParam = NppParameters::getInstance();
-			NppGUI & nppGui = const_cast<NppGUI &>(nppParam.getNppGUI());
+			NppGUI & nppGui = nppParam.getNppGUI();
 
 			// replacement for obsolete custom SCN_SCROLLED
 			if (notification->updated & SC_UPDATE_V_SCROLL)
 			{
-				int urlAction = (NppParameters::getInstance()).getNppGUI()._styleURL;
-				if ((urlAction == 1) || (urlAction == 2))
-					addHotSpot();
+				addHotSpot(notifyView);
 			}
 
 			// if it's searching/replacing, then do nothing
@@ -816,8 +854,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			if (notification->nmhdr.hwndFrom != _pEditView->getHSelf()) // notification come from unfocus view - both views ae visible
 			{
 				//ScintillaEditView * unfocusView = isFromPrimary ? &_subEditView : &_mainEditView;
-				if (nppGui._smartHiliteOnAnotherView &&
-					_pEditView->getCurrentBufferID() != notifyView->getCurrentBufferID())
+				if (nppGui._smartHiliteOnAnotherView)
 				{
 					TCHAR selectedText[1024];
 					_pEditView->getGenericSelectedText(selectedText, sizeof(selectedText)/sizeof(TCHAR), false);
@@ -845,7 +882,14 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				}
 			}
 
-			updateStatusBar();
+			bool selectionIsChanged = (notification->updated & SC_UPDATE_SELECTION) != 0;
+			// note: changing insert/overwrite mode will cause Scintilla to notify with SC_UPDATE_SELECTION
+			bool contentIsChanged = (notification->updated & SC_UPDATE_CONTENT) != 0;
+			if (selectionIsChanged || contentIsChanged)
+			{
+				updateStatusBar();
+			}
+
 			if (_pFuncList && (!_pFuncList->isClosed()) && _pFuncList->isVisible())
 				_pFuncList->markEntry();
 			AutoCompletion * autoC = isFromPrimary?&_autoCompleteMain:&_autoCompleteSub;
@@ -859,8 +903,6 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			try
 			{
 				LPTOOLTIPTEXT lpttt = (LPTOOLTIPTEXT)notification;
-
-				//Joce's fix
 				lpttt->hinst = NULL;
 
 				POINT p;
@@ -920,7 +962,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 
 		case SCN_ZOOM:
 		{
-			if (not notifyView)
+			if (!notifyView)
 				return FALSE;
 
 			ScintillaEditView * unfocusView = isFromPrimary ? &_subEditView : &_mainEditView;
@@ -943,7 +985,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 
 		case SCN_PAINTED:
 		{
-			if (not notifyView)
+			if (!notifyView)
 				return FALSE;
 
 			// Check if a restore position is needed. 
@@ -964,7 +1006,9 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				_subEditView.restoreCurrentPosPreStep();
 				_subEditView.setWrapRestoreNeeded(false);
 			}
+
 			notifyView->updateLineNumberWidth();
+
 			if (_syncInfo.doSync())
 				doSynScorll(HWND(notification->nmhdr.hwndFrom));
 
@@ -973,53 +1017,15 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			// if it's searching/replacing, then do nothing
 			if ((_linkTriggered && !nppParam._isFindReplacing) || notification->wParam == LINKTRIGGERED)
 			{
-				int urlAction = (NppParameters::getInstance()).getNppGUI()._styleURL;
-				if ((urlAction == 1) || (urlAction == 2))
-					addHotSpot();
+				addHotSpot();
 				_linkTriggered = false;
 			}
 
-			if (_pDocMap && (not _pDocMap->isClosed()) && _pDocMap->isVisible() && not _pDocMap->isTemporarilyShowing())
+			if (_pDocMap && (!_pDocMap->isClosed()) && _pDocMap->isVisible() && !_pDocMap->isTemporarilyShowing())
 			{
 				_pDocMap->wrapMap();
 				_pDocMap->scrollMap();
 			}
-			break;
-		}
-
-		case SCN_HOTSPOTDOUBLECLICK:
-		{
-			if (not notifyView)
-				return FALSE;
-
-			// Get the style and make sure it is a hotspot
-			uint8_t style = static_cast<uint8_t>(notifyView->execute(SCI_GETSTYLEAT, notification->position));
-			if (not notifyView->execute(SCI_STYLEGETHOTSPOT, style))
-				break;
-
-			long long startPos, endPos, docLen;
-			startPos = endPos = notification->position;
-			docLen = notifyView->getCurrentDocLen();
-
-			// Walk backwards/forwards to get the contiguous text in the same style
-			while (startPos > 0 && static_cast<uint8_t>(notifyView->execute(SCI_GETSTYLEAT, static_cast<WPARAM>(startPos - 1))) == style)
-				startPos--;
-			while (endPos < docLen && static_cast<uint8_t>(notifyView->execute(SCI_GETSTYLEAT, static_cast<WPARAM>(endPos))) == style)
-				endPos++;
-
-			// Select the entire link
-			notifyView->execute(SCI_SETANCHOR, static_cast<WPARAM>(startPos));
-			notifyView->execute(SCI_SETCURRENTPOS, static_cast<WPARAM>(endPos));
-
-			generic_string url = notifyView->getGenericTextAsString(static_cast<size_t>(startPos), static_cast<size_t>(endPos));
-
-			// remove the flickering: it seems a mouse left button up is missing after SCN_HOTSPOTDOUBLECLICK
-			::PostMessage(notifyView->getHSelf(), WM_LBUTTONUP, 0, 0);
-			auto curPos = notifyView->execute(SCI_GETCURRENTPOS);
-			notifyView->execute(SCI_SETSEL, curPos, curPos);
-
-			::ShellExecute(_pPublicInterface->getHSelf(), TEXT("open"), url.c_str(), NULL, NULL, SW_SHOW);
-
 			break;
 		}
 

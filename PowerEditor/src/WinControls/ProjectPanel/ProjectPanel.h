@@ -1,29 +1,18 @@
 // This file is part of Notepad++ project
-// Copyright (C)2020 Don HO <don.h@free.fr>
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either
-// version 2 of the License, or (at your option) any later version.
-//
-// Note that the GPL places important restrictions on "derived works", yet
-// it does not provide a detailed definition of that term.  To avoid      
-// misunderstandings, we consider an application to constitute a          
-// "derivative work" for the purpose of this license if it does any of the
-// following:                                                             
-// 1. Integrates source code from Notepad++.
-// 2. Integrates/includes/aggregates Notepad++ into a proprietary executable
-//    installer, such as those produced by InstallShield.
-// 3. Links to a library or executes a program that does any of the above.
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 #pragma once
@@ -32,7 +21,7 @@
 #include "TreeView.h"
 #include "ProjectPanel_rc.h"
 
-#define PM_PROJECTPANELTITLE     TEXT("Project")
+#define PM_PROJECTPANELTITLE     TEXT("Project Panel")
 #define PM_WORKSPACEROOTNAME     TEXT("Workspace")
 #define PM_NEWFOLDERNAME         TEXT("Folder Name")
 #define PM_NEWPROJECTNAME        TEXT("Project Name")
@@ -44,6 +33,7 @@
 #define PM_SAVEASWORKSPACE         TEXT("Save As...")
 #define PM_SAVEACOPYASWORKSPACE    TEXT("Save a Copy As...")
 #define PM_NEWPROJECTWORKSPACE     TEXT("Add New Project")
+#define PM_FINDINFILESWORKSPACE    TEXT("Find in Projects...")
 
 #define PM_EDITRENAME              TEXT("Rename")
 #define PM_EDITNEWFOLDER           TEXT("Add Folder")
@@ -63,15 +53,16 @@ enum NodeType {
 };
 
 class TiXmlNode;
-class FileDialog;
+class CustomFileDialog;
 
 class ProjectPanel : public DockingDlgInterface {
 public:
 	ProjectPanel(): DockingDlgInterface(IDD_PROJECTPANEL) {};
 	~ProjectPanel();
 
-	void init(HINSTANCE hInst, HWND hPere) {
+	void init(HINSTANCE hInst, HWND hPere, int panelID) {
 		DockingDlgInterface::init(hInst, hPere);
+		_panelID = panelID;
 	}
 
     virtual void display(bool toShow = true) const {
@@ -82,8 +73,16 @@ public:
         _hParent = parent2set;
     };
 
+	void setPanelTitle(generic_string title) {
+		_panelTitle = title;
+	};
+	const TCHAR * getPanelTitle() const {
+		return _panelTitle.c_str();
+	};
+
 	void newWorkSpace();
-	bool openWorkSpace(const TCHAR *projectFileName);
+	bool saveWorkspaceRequest();
+	bool openWorkSpace(const TCHAR *projectFileName, bool force = false);
 	bool saveWorkSpace();
 	bool saveWorkSpaceAs(bool saveCopyAs);
 	void setWorkSpaceFilePath(const TCHAR *projectFileName){
@@ -95,7 +94,7 @@ public:
 	bool isDirty() const {
 		return _isDirty;
 	};
-	void checkIfNeedSave(const TCHAR *title);
+	bool checkIfNeedSave();
 
 	virtual void setBackgroundColor(COLORREF bgColour) {
 		TreeView_SetBkColor(_treeView.getHSelf(), bgColour);
@@ -103,6 +102,7 @@ public:
 	virtual void setForegroundColor(COLORREF fgColour) {
 		TreeView_SetTextColor(_treeView.getHSelf(), fgColour);
     };
+	bool enumWorkSpaceFiles(HTREEITEM tvFrom, const std::vector<generic_string> & patterns, std::vector<generic_string> & fileNames);
 
 protected:
 	TreeView _treeView;
@@ -112,9 +112,11 @@ protected:
 	HMENU _hProjectMenu = nullptr;
 	HMENU _hFolderMenu = nullptr;
 	HMENU _hFileMenu = nullptr;
+	generic_string _panelTitle;
 	generic_string _workSpaceFilePath;
 	generic_string _selDirOfFilesFromDirDlg;
 	bool _isDirty = false;
+	int _panelID = 0;
 
 	void initMenus();
 	void destroyMenus();
@@ -124,7 +126,7 @@ protected:
 	void recursiveAddFilesFrom(const TCHAR *folderPath, HTREEITEM hTreeItem);
 	HTREEITEM addFolder(HTREEITEM hTreeItem, const TCHAR *folderName);
 
-	bool writeWorkSpace(TCHAR *projectFileName = NULL);
+	bool writeWorkSpace(const TCHAR *projectFileName = NULL);
 	generic_string getRelativePath(const generic_string & fn, const TCHAR *workSpaceFileName);
 	void buildProjectXml(TiXmlNode *root, HTREEITEM hItem, const TCHAR* fn2write);
 	NodeType getNodeType(HTREEITEM hItem);
@@ -139,7 +141,7 @@ protected:
 	HMENU getMenuHandler(HTREEITEM selectedItem);
 	generic_string getAbsoluteFilePath(const TCHAR * relativePath);
 	void openSelectFile();
-	void setFileExtFilter(FileDialog & fDlg);
+	void setFileExtFilter(CustomFileDialog & fDlg);
 	std::vector<generic_string*> fullPathStrs;
 };
 
